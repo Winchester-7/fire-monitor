@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fire Monitor">
+<meta name="theme-color" content="#0b0a0d">
+<title>Fire Monitor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<script src="config.js"></script>
+<style>
+:root{
+  --bg:#0b0a0d; --bg2:#121117; --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.07); --line:rgba(255,255,255,.08);
+  --txt:#f5f1e8; --mut:#a39d92; --dim:#6f6a63;
+  --gold:#e2b04a; --gold2:#f7dc8e; --gold3:#9c6a1c;
+  --fire:#ff3b30; --fire2:#ff6a3d; --warn:#ffb020; --ok:#34c759; --info:#6aa9ff; --mal:#c48cff;
+  --safe-t:env(safe-area-inset-top); --safe-b:env(safe-area-inset-bottom);
+  --r:22px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+body{overflow:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.hidden{display:none!important}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+.bgfx{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 70% at 50% -10%,rgba(226,176,74,.16),transparent 60%),radial-gradient(80% 50% at 100% 100%,rgba(156,106,28,.10),transparent 60%),var(--bg);transition:background 1s}
+body.alarm .bgfx{background:radial-gradient(130% 80% at 50% 0%,rgba(255,59,48,.55),transparent 62%),radial-gradient(90% 60% at 50% 110%,rgba(255,106,61,.35),transparent 60%),#1a0606;animation:bgpulse 1.6s ease-in-out infinite}
+body.attn .bgfx{background:radial-gradient(130% 80% at 50% 0%,rgba(255,176,32,.35),transparent 62%),#140e05}
+@keyframes bgpulse{50%{filter:brightness(1.35)}}
+main{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(var(--safe-t) + 10px) 18px calc(var(--safe-b) + 96px)}
+.view{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+
+/* header */
+.top{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+.top img{width:38px;height:38px;border-radius:11px;box-shadow:0 0 0 1px rgba(226,176,74,.35)}
+.brand{flex:1;min-width:0}
+.brand b{display:block;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold2);font-weight:700}
+.brand span{font-size:12px;color:var(--mut)}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:13px;color:var(--mut);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.dot.ok{background:var(--ok);box-shadow:0 0 0 4px rgba(52,199,89,.15)}
+.dot.bad{background:var(--fire);box-shadow:0 0 0 4px rgba(255,59,48,.18);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.35}}
+
+/* calm hero */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 6px}
+.ring{position:relative;width:212px;height:212px;margin:8px 0 22px}
+.ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,var(--gold3),var(--gold2),var(--gold),var(--gold3),var(--gold2),var(--gold3));animation:spin 14s linear infinite;-webkit-mask:radial-gradient(circle,transparent 61%,#000 62%,#000 66%,transparent 67%);mask:radial-gradient(circle,transparent 61%,#000 62%,#000 66%,transparent 67%)}
+.ring::after{content:"";position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle at 50% 35%,rgba(52,199,89,.22),rgba(52,199,89,.04) 60%,transparent 70%);animation:breathe 4s ease-in-out infinite}
+.ring .core{position:absolute;inset:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#1d1a14,#0d0c0f 70%);box-shadow:inset 0 0 0 1px rgba(226,176,74,.25),0 20px 60px rgba(0,0,0,.6)}
+.ring .core svg{width:74px;height:74px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{50%{transform:scale(1.06);opacity:.7}}
+.hero h1{margin:0;font-size:32px;letter-spacing:-.02em;font-weight:750}
+.hero p{margin:6px 0 0;color:var(--mut);font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0 16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 10px;text-align:center}
+.stat b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em}
+.stat span{font-size:12px;color:var(--mut)}
+.stat.warn b{color:var(--warn)} .stat.bad b{color:var(--fire)}
+
+.sect{margin:22px 2px 10px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;display:flex;justify-content:space-between;align-items:center}
+.sect a{color:var(--gold);text-transform:none;letter-spacing:0;font-size:14px}
+
+/* event rows */
+.list{display:flex;flex-direction:column;gap:8px}
+.ev{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;background:var(--card);border:1px solid var(--line);border-radius:18px;text-align:left;width:100%}
+.ev .ic{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:var(--card2)}
+.ev .tx{flex:1;min-width:0}
+.ev .t1{font-weight:650;font-size:15px}
+.ev .t2{color:var(--mut);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .tm{color:var(--dim);font-size:12px;white-space:nowrap;margin-top:2px}
+.lv-fire .ic{background:rgba(255,59,48,.18)} .lv-fire .t1{color:#ff8a80}
+.lv-attention .ic,.lv-alarm .ic{background:rgba(255,176,32,.16)} .lv-attention .t1,.lv-alarm .t1{color:#ffd27a}
+.lv-malfunction .ic{background:rgba(196,140,255,.15)}
+.lv-cleared .ic{background:rgba(52,199,89,.15)}
+.empty{color:var(--dim);text-align:center;padding:26px 0;font-size:14px}
+
+/* ALARM */
+.alarmbox{text-align:center;padding:6px 0 0}
+.siren{position:relative;width:150px;height:150px;margin:10px auto 18px}
+.siren span{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,120,100,.7);animation:wave 1.8s ease-out infinite}
+.siren span:nth-child(2){animation-delay:.6s}.siren span:nth-child(3){animation-delay:1.2s}
+.siren i{position:absolute;inset:28px;border-radius:50%;background:radial-gradient(circle at 50% 35%,#ff7a5c,#ff3b30 55%,#a3130c);display:grid;place-items:center;font-style:normal;font-size:46px;box-shadow:0 0 60px rgba(255,59,48,.8)}
+@keyframes wave{from{transform:scale(.55);opacity:1}to{transform:scale(1.35);opacity:0}}
+.alarmbox .kind{font-size:15px;letter-spacing:.32em;font-weight:800;color:#ffd0c8}
+.alarmbox .floor{font-size:56px;font-weight:800;letter-spacing:-.03em;line-height:1.02;margin:6px 0 2px}
+.alarmbox .place{font-size:26px;font-weight:650}
+.alarmbox .dev{margin-top:10px;color:#ffd9d2;font-size:15px}
+.alarmbox .when{margin-top:4px;color:rgba(255,220,210,.7);font-size:14px}
+.mini{position:relative;margin:18px 0 0;border-radius:var(--r);overflow:hidden;background:#171717;height:190px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.mini img{position:absolute;max-width:none;transform-origin:0 0}
+.mini .pin{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--fire);box-shadow:0 0 0 6px rgba(255,59,48,.35);animation:pinp 1s infinite}
+@keyframes pinp{50%{box-shadow:0 0 0 16px rgba(255,59,48,0)}}
+.mini .cap{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.7);color:#fff;font-size:12px;padding:5px 9px;border-radius:9px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 14px;border-radius:16px;font-weight:650;font-size:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);text-decoration:none;color:inherit}
+.btn.gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1406;border:0}
+.btn.white{background:#fff;color:#a3130c;border:0}
+.btn.wide{grid-column:1/-1}
+.more{margin-top:14px}
+
+/* PLANS */
+.chips{display:flex;gap:8px;overflow-x:auto;margin:0 -18px 14px;padding:0 18px 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:9px 14px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px;color:var(--mut);white-space:nowrap;position:relative}
+.chip.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1406;border-color:transparent;font-weight:650}
+.chip .bd{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--fire);box-shadow:0 0 0 2px var(--bg)}
+.planwrap{position:relative;height:calc(100vh - 310px);min-height:340px;border-radius:var(--r);overflow:hidden;background:#171717;touch-action:none;box-shadow:inset 0 0 0 1px var(--line)}
+.planwrap .stage{position:absolute;left:0;top:0;transform-origin:0 0}
+.planwrap img{display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.d{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--gold);border:2px solid #fff8e6;box-shadow:0 0 10px rgba(226,176,74,.7),0 1px 3px rgba(0,0,0,.5)}
+.d.off{background:#9a958c}
+.d.mal{background:var(--mal)}
+.d.att{background:var(--warn);width:18px;height:18px;margin:-9px 0 0 -9px}
+.d.fire{background:var(--fire);width:20px;height:20px;margin:-10px 0 0 -10px;animation:pinp 1s infinite;z-index:3}
+.d.sel{outline:3px solid #f7dc8e;outline-offset:2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 2px 0;color:var(--mut);font-size:12px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.zoombtns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:5}
+.zoombtns button{width:38px;height:38px;border-radius:12px;background:rgba(20,18,22,.82);color:#fff;font-size:20px;backdrop-filter:blur(10px)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;opacity:0;pointer-events:none;transition:.25s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:#17151b;border-radius:26px 26px 0 0;padding:10px 20px calc(var(--safe-b) + 22px);transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1);border-top:1px solid var(--line);max-height:86vh;overflow:auto}
+.sheet.on{transform:none}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:#3a3740;margin:0 auto 14px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:9px 12px;font-size:15px;margin:14px 0}
+.kv span{color:var(--mut)}
+
+/* tabbar */
+nav{position:fixed;left:12px;right:12px;bottom:calc(var(--safe-b) + 10px);z-index:20;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(24,22,28,.78);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);border:1px solid var(--line);border-radius:24px;padding:7px}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border-radius:17px;color:var(--dim);font-size:11px;font-weight:600;position:relative}
+nav button svg{width:24px;height:24px}
+nav button.on{color:var(--gold2);background:rgba(226,176,74,.1)}
+nav .bd{position:absolute;top:4px;right:calc(50% - 20px);min-width:17px;height:17px;border-radius:9px;background:var(--fire);color:#fff;font-size:10px;line-height:17px;padding:0 4px}
+
+/* onboarding */
+.ob{min-height:100%;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:20px 6px}
+.ob img.logo{width:96px;height:96px;border-radius:26px;margin:0 auto 22px;box-shadow:0 20px 60px rgba(226,176,74,.25),0 0 0 1px rgba(226,176,74,.4)}
+.ob h2{font-size:28px;margin:0 0 8px;letter-spacing:-.02em}
+.ob p{color:var(--mut);margin:0 auto 22px;max-width:340px}
+.steps{text-align:left;display:flex;flex-direction:column;gap:10px;margin:6px 0 22px}
+.step{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+.step b{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(226,176,74,.15);color:var(--gold2);font-size:14px}
+.codein{width:100%;font:700 26px ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.14em;text-align:center;text-transform:uppercase;padding:18px 10px;border-radius:18px;background:var(--card);border:1px solid rgba(226,176,74,.35);color:var(--txt);outline:none}
+.codein:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(226,176,74,.15)}
+.err{color:#ff8a80;font-size:14px;min-height:20px;margin:10px 0}
+.set{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .l{flex:1}.row .l small{display:block;color:var(--mut);font-size:13px}
+.row input{background:transparent;border:0;color:var(--txt);font:inherit;text-align:right;outline:none;width:150px;min-width:0}
+.toast{position:fixed;left:50%;top:calc(var(--safe-t) + 12px);transform:translate(-50%,-140%);z-index:60;background:rgba(30,28,34,.95);border:1px solid var(--line);padding:11px 16px;border-radius:16px;font-size:14px;transition:.35s;max-width:90vw;backdrop-filter:blur(10px)}
+.toast.on{transform:translate(-50%,0)}
+.demo-badge{position:fixed;top:calc(var(--safe-t) + 6px);right:10px;z-index:30;font-size:11px;padding:4px 8px;border-radius:8px;background:rgba(226,176,74,.18);color:var(--gold2)}
+@media (min-width:700px){main{max-width:520px;margin:0 auto;width:100%}nav{max-width:480px;margin:0 auto}}
+</style>
+</head>
+<body>
+<div class="bgfx"></div>
+<div id="app">
+  <main id="main"></main>
+  <nav id="nav" class="hidden">
+    <button data-v="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>Статус</button>
+    <button data-v="events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 004 0"/></svg>События<span class="bd hidden" id="evbd"></span></button>
+    <button data-v="plans"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>Этажи</button>
+    <button data-v="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Настройки</button>
+  </nav>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetc"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const CFG = Object.assign({relay:'https://ntfy.sh', vapid:'', site:'Golden Dragon Hotel', phone:''}, window.FM_CONFIG||{});
+const DEMO = !!window.FM_DEMO || location.hash.indexOf('demo')>=0;
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LV = {
+  fire:{ic:'🔥',name:'Пожар',cls:'lv-fire'}, attention:{ic:'⚠️',name:'Внимание',cls:'lv-attention'},
+  alarm:{ic:'🚨',name:'Тревога',cls:'lv-alarm'}, malfunction:{ic:'🔧',name:'Неисправность',cls:'lv-malfunction'},
+  info:{ic:'ℹ️',name:'Информация',cls:'lv-info'}
+};
+const rank = l=>({fire:5,attention:4,alarm:3,malfunction:2,info:1}[l]||0);
+const S = {code:null, site:null, events:[], status:null, view:'home', plan:null, filter:'all', lastPoll:0, phone:'', seen:0};
+const ls = {get:k=>{try{return localStorage.getItem(k)}catch(e){return null}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------- IndexedDB (shared with service worker) ---------- */
+function idb(){return new Promise((res,rej)=>{if(!('indexedDB' in window))return rej('no idb');const r=indexedDB.open('firemon',1);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('events',{keyPath:'id'});d.createObjectStore('kv')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function dbAll(){try{const d=await idb();return await new Promise(r=>{const q=d.transaction('events').objectStore('events').getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([])})}catch(e){return []}}
+async function dbPut(evs){try{const d=await idb();const t=d.transaction('events','readwrite');evs.forEach(e=>t.objectStore('events').put(e));}catch(e){}}
+async function kvSet(k,v){try{const d=await idb();d.transaction('kv','readwrite').objectStore('kv').put(v,k)}catch(e){}}
+async function kvGet(k){try{const d=await idb();return await new Promise(r=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}}
+
+/* ---------- crypto: site data is encrypted with the pair code ---------- */
+const normCode = c=>String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const fmtCode = c=>{c=normCode(c);return [c.slice(0,4),c.slice(4,8),c.slice(8,12)].filter(Boolean).join('-')};
+const topic = sfx=>'gdfm-'+normCode(S.code).toLowerCase()+(sfx?'-'+sfx:'');
+const b64d = s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decryptSite(code){
+  const enc = window.FM_SITE_ENC || await (await fetch('site.enc',{cache:'no-cache'})).json();
+  const key = await crypto.subtle.importKey('raw',new TextEncoder().encode(normCode(code)),'PBKDF2',false,['deriveKey']);
+  const k = await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64d(enc.salt),iterations:enc.iter,hash:'SHA-256'},key,{name:'AES-GCM',length:256},false,['decrypt']);
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(enc.iv)},k,b64d(enc.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function indexSite(s){
+  s.Z={}; s.zones.forEach(z=>s.Z[z.no]=z);
+  s.D={}; s.devices.forEach(d=>s.D[d.g]=d);
+  s.P={}; s.plans.forEach(p=>s.P[p.id]=p);
+  s.PN={}; s.plans.forEach(p=>s.PN[p.name]=p);
+  return s;
+}
+
+/* ---------- time ---------- */
+function ago(ts){const s=Math.max(0,(Date.now()-ts)/1000);if(s<45)return 'только что';if(s<3600)return Math.round(s/60)+' мин назад';if(s<86400)return Math.round(s/3600)+' ч назад';return new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}
+const hm = ts=>new Date(ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function dayLabel(ts){const d=new Date(ts),t=new Date();const y=new Date(Date.now()-864e5);if(d.toDateString()===t.toDateString())return 'Сегодня';if(d.toDateString()===y.toDateString())return 'Вчера';return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}
+
+/* ---------- relay (ntfy) ---------- */
+async function relayPoll(){
+  if(DEMO||!S.code) return;
+  try{
+    const r = await fetch(`${CFG.relay}/${topic('e')}/json?poll=1&since=12h`,{cache:'no-store'});
+    const txt = await r.text(); const evs=[]; let st=null;
+    txt.split('\n').forEach(l=>{if(!l.trim())return;try{const m=JSON.parse(l);if(m.event!=='message')return;const o=JSON.parse(m.message);if(o.t==='event')evs.push(o);else if(o.t==='status'&&(!st||o.ts>st.ts))st=o}catch(e){}});
+    if(evs.length){await dbPut(evs)}
+    if(st){S.status=st;kvSet('status',st)}
+    S.lastPoll=Date.now();
+    await loadEvents(); render();
+  }catch(e){console.warn('relay',e)}
+}
+async function relaySend(obj){
+  const r = await fetch(`${CFG.relay}/${topic('s')}`,{method:'POST',body:JSON.stringify(obj)});
+  if(!r.ok) throw new Error('relay '+r.status);
+}
+async function loadEvents(){
+  const all = await dbAll();
+  all.sort((a,b)=>b.ts-a.ts);
+  S.events = all.slice(0,500);
+}
+
+/* ---------- derived state ---------- */
+function online(){
+  const st=S.status; if(DEMO) return {ok:true,txt:'Ресепшен на связи · только что'};
+  if(!st) return {ok:false,txt:'Ожидание связи с ресепшеном'};
+  const lim=((st.hbMin||15)*1.6+3)*60e3, age=Date.now()-st.ts;
+  if(age>lim) return {ok:false,txt:'Нет связи с ресепшеном · '+ago(st.ts)};
+  if(!st.firesec) return {ok:false,txt:'FireSec не запущен на ресепшене'};
+  return {ok:true,txt:'Ресепшен на связи · '+ago(st.ts)};
+}
+function activeAlarms(){
+  // Prefer the agent's status snapshot; add newer events not yet in it.
+  const act=new Map();
+  if(S.status&&S.status.active) S.status.active.forEach(e=>{if(rank(e.level)>=3)act.set(keyOf(e),e)});
+  const since=S.status?S.status.ts:0;
+  S.events.slice().reverse().forEach(e=>{ if(e.ts<since||e.test) return; const k=keyOf(e);
+    if(e.cleared) act.delete(k); else if(rank(e.level)>=3) act.set(k,e)});
+  return [...act.values()].sort((a,b)=>rank(b.level)-rank(a.level)||b.ts-a.ts);
+}
+const keyOf = e=>(e.guid||('z'+e.zoneNo))+'|'+(e.stateCode||e.state);
+function devPos(e){
+  const s=S.site; if(!s) return null;
+  const d=e.guid&&s.D[e.guid]; if(d&&d.p&&d.p.length){const p=d.p[0];return {plan:s.P[p[0]],x:p[1],y:p[2]}}
+  const z=e.zoneNo&&s.Z[e.zoneNo]; if(z&&z.pos&&z.pos.length){const p=z.pos[0];return {plan:s.P[p.plan],x:p.x,y:p.y}}
+  return null;
+}
+
+/* ---------- views ---------- */
+const V = {};
+V.home = ()=>{
+  const al=activeAlarms(), on=online();
+  document.body.classList.toggle('alarm', al.some(a=>a.level==='fire'));
+  document.body.classList.toggle('attn', !al.some(a=>a.level==='fire') && al.length>0);
+  const head = `<div class="top"><img src="icons/icon-192.png" alt=""><div class="brand"><b>Golden Dragon</b><span>Fire Monitor · ${esc(CFG.site)}</span></div></div>
+   <div style="text-align:center"><span class="pill"><i class="dot ${on.ok?'ok':'bad'}"></i>${esc(on.txt)}</span></div>`;
+  if(al.length){
+    const a=al[0], L=LV[a.level]||LV.info, pos=devPos(a);
+    const floor=a.floor||(pos&&pos.plan&&pos.plan.name)||'—';
+    return head+`<div class="alarmbox">
+      <div class="siren"><span></span><span></span><span></span><i>${L.ic}</i></div>
+      <div class="kind">${esc((a.state||L.name).toUpperCase())}</div>
+      <div class="floor">${esc(floor)}</div>
+      <div class="place">${esc(a.place||a.zone||'')}</div>
+      <div class="dev">${esc(a.device||'')}${a.deviceName?' · '+esc(a.deviceName):''}</div>
+      <div class="when">${hm(a.ts)} · ${ago(a.ts)}</div>
+      ${pos&&pos.plan&&pos.plan.img?`<div class="mini" id="mini" data-ev="${esc(a.id)}"><img src="${pos.plan.img}"><div class="pin"></div><div class="cap">${esc(pos.plan.name)}</div></div>`:''}
+      <div class="btns">
+        ${pos?`<button class="btn white" onclick="openPlanFor('${esc(a.id)}')">🗺 На плане</button>`:''}
+        ${S.phone?`<a class="btn ${pos?'':'wide'}" href="tel:${esc(S.phone)}">📞 Ресепшен</a>`:`<button class="btn" onclick="go('settings')">📞 Телефон</button>`}
+      </div>
+      ${DEMO?`<button class="btn wide more" onclick="demoClear()">Демо: снять тревогу</button>`:''}
+      ${al.length>1?`<div class="sect"><span>Ещё активно: ${al.length-1}</span></div><div class="list">${al.slice(1).map(evRow).join('')}</div>`:''}
+    </div>`;
+  }
+  const st=S.status||{}, mal=(st.active||[]).filter(e=>e.level==='malfunction').length;
+  const last=S.events.filter(e=>!e.test).slice(0,4);
+  return head+`<div class="hero">
+    <div class="ring"><div class="core">${shieldSVG()}</div></div>
+    <h1>Всё спокойно</h1><p>Пожарная сигнализация в норме</p></div>
+    <div class="stats">
+      <div class="stat"><b>${st.devices||(S.site?S.site.devices.length:'—')}</b><span>датчиков</span></div>
+      <div class="stat ${st.disabled?'warn':''}"><b>${st.disabled!=null?st.disabled:'—'}</b><span>отключено</span></div>
+      <div class="stat ${mal?'bad':''}"><b>${st.active?mal:'—'}</b><span>неисправн.</span></div>
+    </div>
+    <div class="sect"><span>Последние события</span><a onclick="go('events')">Все</a></div>
+    <div class="list">${last.length?last.map(evRow).join(''):'<div class="empty">Событий пока нет. Здесь появится всё, что увидит FireSec.</div>'}</div>`;
+};
+function shieldSVG(){return `<svg viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7dc8e"/><stop offset="1" stop-color="#b07a24"/></linearGradient></defs><path d="M32 6l20 8v14c0 14-9 24-20 28C21 52 12 42 12 28V14z" fill="none" stroke="url(#g)" stroke-width="3"/><path d="M23 32l6 6 12-13" fill="none" stroke="#34c759" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+function evRow(e){
+  const L=e.cleared?{ic:'✅',cls:'lv-cleared'}:(LV[e.level]||LV.info);
+  const where=[e.floor,e.place].filter(Boolean).join(', ')||e.zone||'';
+  const t1=e.test?esc(e.title):(e.cleared?'Снято: '+esc(e.state):esc(e.state||L.name))+(where?' · '+esc(where):'');
+  const t2=e.test?esc(e.body):esc([e.device,e.deviceName].filter(Boolean).join(' · '));
+  return `<button class="ev ${L.cls}" onclick="openEvent('${esc(e.id)}')"><div class="ic">${L.ic}</div><div class="tx"><div class="t1">${t1}</div><div class="t2">${t2||'&nbsp;'}</div></div><div class="tm">${hm(e.ts).slice(0,5)}</div></button>`;
+}
+V.events = ()=>{
+  document.body.classList.remove('alarm','attn');
+  const F={all:'Все',fire:'Пожар и тревоги',malfunction:'Неисправности',info:'Прочее'};
+  let ev=S.events;
+  if(S.filter==='fire') ev=ev.filter(e=>rank(e.level)>=3);
+  else if(S.filter==='malfunction') ev=ev.filter(e=>e.level==='malfunction');
+  else if(S.filter==='info') ev=ev.filter(e=>rank(e.level)<=1);
+  let html=`<div class="top"><div class="brand"><b>События</b><span>Всё, что передал агент с ресепшена</span></div></div>
+   <div class="chips">${Object.entries(F).map(([k,v])=>`<button class="chip ${S.filter===k?'on':''}" onclick="S.filter='${k}';render()">${v}</button>`).join('')}</div>`;
+  if(!ev.length) return html+'<div class="empty">Нет событий</div>';
+  let day='';
+  ev.slice(0,300).forEach(e=>{const d=dayLabel(e.ts);if(d!==day){day=d;html+=`<div class="sect"><span>${d}</span></div>`}html+=evRow(e)});
+  return html.replace(/<\/button><div class="sect">/g,'</button><div class="sect">');
+};
+V.plans = ()=>{
+  document.body.classList.remove('alarm','attn');
+  const s=S.site; if(!s) return '<div class="empty">Нет данных объекта</div>';
+  const al=activeAlarms(); const hot=new Set(al.map(a=>{const p=devPos(a);return p&&p.plan&&p.plan.id}));
+  if(!S.plan){const h=al.map(devPos).find(p=>p&&p.plan);S.plan=h?h.plan.id:(s.plans.find(p=>p.img)||s.plans[0]).id}
+  return `<div class="top"><div class="brand"><b>Этажи и планы</b><span>${s.devices.length} датчиков на ${s.plans.length} планах</span></div></div>
+   <div class="chips" id="pchips">${s.plans.map(p=>`<button class="chip ${S.plan===p.id?'on':''}" onclick="selPlan('${p.id}')">${esc(p.name)}${hot.has(p.id)?'<span class="bd"></span>':''}</button>`).join('')}</div>
+   <div class="planwrap" id="pw"><div class="zoombtns"><button onclick="zoomBy(1.4)">+</button><button onclick="zoomBy(1/1.4)">−</button><button onclick="fitPlan()" style="font-size:14px">⤢</button></div><div class="stage" id="stage"></div></div>
+   <div class="legend"><span><i style="background:var(--gold)"></i>норма</span><span><i style="background:var(--fire)"></i>пожар</span><span><i style="background:var(--warn)"></i>внимание</span><span><i style="background:var(--mal)"></i>неисправность</span><span><i style="background:#9a958c"></i>отключён</span></div>`;
+};
+V.settings = ()=>{
+  document.body.classList.remove('alarm','attn');
+  const perm=('Notification' in window)?Notification.permission:'unsupported';
+  const pt={granted:'Включены ✓',denied:'Запрещены в настройках iPhone',default:'Не включены',unsupported:'Недоступны: откройте с экрана Домой'}[perm];
+  const on=online();
+  return `<div class="top"><div class="brand"><b>Настройки</b><span>Fire Monitor ${DEMO?'· демо':''}</span></div></div>
+   <div class="set">
+     <div class="row"><div class="l">Уведомления<small>${pt}</small></div>${perm!=='granted'&&perm!=='unsupported'?'<button class="btn gold" style="padding:9px 14px" onclick="enablePush()">Включить</button>':''}</div>
+     <div class="row"><div class="l">Связь с ресепшеном<small>${esc(on.txt)}</small></div><i class="dot ${on.ok?'ok':'bad'}"></i></div>
+     <div class="row"><div class="l">Код объекта<small>${esc(fmtCode(S.code||''))}</small></div></div>
+     <div class="row"><div class="l">Телефон ресепшена<small>для кнопки «Позвонить»</small></div><input id="phone" inputmode="tel" placeholder="+996 …" value="${esc(S.phone)}" onchange="savePhone(this.value)"></div>
+   </div>
+   <div class="btns"><button class="btn gold wide" onclick="testPush()">Проверить уведомление</button>
+   <button class="btn wide" onclick="relayPoll().then(()=>toast('Обновлено'))">Обновить данные</button></div>
+   <div class="sect"><span>Как это работает</span></div>
+   <div class="set"><div class="row"><div class="l" style="font-size:14px;color:var(--mut)">Агент на компьютере ресепшена только читает состояние FireSec и сразу отправляет уведомление на этот iPhone через интернет. В пожарной системе ничего не меняется. Если связь с ресепшеном пропадёт больше чем на ${Math.round(((S.status&&S.status.hbMin)||15)*1.6+3)} минут, на главном экране появится красный индикатор.</div></div></div>
+   <div class="btns"><button class="btn wide" style="color:#ff8a80" onclick="unpair()">Отключить этот телефон</button></div>`;
+};
+
+/* ---------- plan viewer with pinch/zoom ---------- */
+let PZ={s:1,x:0,y:0,img:null};
+function drawPlan(focus){
+  const s=S.site, p=s&&s.P[S.plan], st=$('#stage'), pw=$('#pw'); if(!p||!st) return;
+  const al=activeAlarms(); const states={};
+  al.forEach(a=>{if(a.guid)states[a.guid]=a.level});
+  ((S.status&&S.status.active)||[]).forEach(a=>{if(a.guid&&!states[a.guid])states[a.guid]=a.level});
+  const W=p.w||1000,H=p.h||800;
+  let dots='';
+  s.devices.forEach(d=>d.p.forEach(q=>{ if(q[0]!==p.id) return;
+    const lv=states[d.g]; const c=lv==='fire'?'fire':(lv==='attention'||lv==='alarm')?'att':lv==='malfunction'?'mal':'';
+    dots+=`<i class="d ${c} ${focus&&focus.g===d.g?'sel':''}" style="left:${q[1]*W}px;top:${q[2]*H}px" data-g="${d.g}"></i>`}));
+  st.style.width=W+'px'; st.style.height=H+'px';
+  st.innerHTML=(p.img?`<img src="${p.img}" width="${W}" height="${H}">`:`<div style="width:${W}px;height:${H}px;background:#16141a"></div>`)+dots;
+  fitPlan();
+  if(focus){const r=pw.getBoundingClientRect();PZ.s=PZ.s*2.2;PZ.x=r.width/2-focus.x*W*PZ.s;PZ.y=r.height/2-focus.y*H*PZ.s;applyPZ()}
+  bindGestures(pw);
+}
+function fitPlan(){const p=S.site.P[S.plan],pw=$('#pw');if(!pw)return;const r=pw.getBoundingClientRect();const W=p.w||1000,H=p.h||800;PZ.s=Math.min(r.width/W,r.height/H);PZ.x=(r.width-W*PZ.s)/2;PZ.y=(r.height-H*PZ.s)/2;applyPZ()}
+function applyPZ(){const st=$('#stage');if(st)st.style.transform=`translate(${PZ.x}px,${PZ.y}px) scale(${PZ.s})`;document.querySelectorAll('.d').forEach(d=>d.style.transform=`scale(${Math.max(.6,1/PZ.s*.9)})`)}
+function zoomBy(f,cx,cy){const r=$('#pw').getBoundingClientRect();cx=cx==null?r.width/2:cx;cy=cy==null?r.height/2:cy;const ns=Math.min(8,Math.max(.15,PZ.s*f));f=ns/PZ.s;PZ.x=cx-(cx-PZ.x)*f;PZ.y=cy-(cy-PZ.y)*f;PZ.s=ns;applyPZ()}
+function bindGestures(el){
+  if(el._b) return; el._b=1; const pts=new Map(); let last=null;
+  let down=null;
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('.zoombtns'))return;el.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});last=null;down=pts.size===1?{x:e.clientX,y:e.clientY}:null});
+  el.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const r=el.getBoundingClientRect();const prev=pts.get(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===1){PZ.x+=e.clientX-prev.x;PZ.y+=e.clientY-prev.y;applyPZ()}
+    else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;if(last){zoomBy(d/last.d,cx,cy);PZ.x+=cx-last.cx;PZ.y+=cy-last.cy;applyPZ()}last={d,cx,cy}}});
+  const up=e=>{pts.delete(e.pointerId);last=null;
+    if(down&&e.type==='pointerup'&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<8){ // tap: find nearest device dot
+      let best=null,bd=30;document.querySelectorAll('#stage .d').forEach(d=>{const r=d.getBoundingClientRect();const dd=Math.hypot(r.left+r.width/2-e.clientX,r.top+r.height/2-e.clientY);if(dd<bd){bd=dd;best=d}});
+      if(best)devInfo(best.dataset.g)}
+    down=null};
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+  el.addEventListener('wheel',e=>{e.preventDefault();const r=el.getBoundingClientRect();zoomBy(e.deltaY<0?1.15:1/1.15,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+}
+function selPlan(id){S.plan=id;render()}
+function openPlanFor(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);const p=e&&devPos(e);if(!p)return;S.plan=p.plan.id;closeSheet();go('plans',{g:e.guid,x:p.x,y:p.y})}
+function devInfo(g){const d=S.site.D[g];if(!d)return;const z=d.z.map(n=>S.site.Z[n]).filter(Boolean)[0];
+  const evs=S.events.filter(e=>e.guid===g).slice(0,5);
+  sheet(`<h3 style="margin:0 0 2px;font-size:21px">${esc(d.t)}</h3><div style="color:var(--mut)">${esc(d.n)}</div>
+   <div class="kv"><span>Этаж</span><b>${esc((z&&z.floor)||S.site.P[S.plan].name)}</b><span>Помещение</span><b>${esc(z?z.place:'—')}</b><span>Зона FireSec</span><b>${z?z.no+' · '+esc(z.name):'—'}</b></div>
+   ${evs.length?'<div class="sect"><span>События датчика</span></div><div class="list">'+evs.map(evRow).join('')+'</div>':''}`)}
+function openEvent(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);if(!e)return;const L=e.cleared?{ic:'✅',name:'Снято'}:(LV[e.level]||LV.info);const pos=devPos(e);
+  sheet(`<div style="display:flex;gap:12px;align-items:center"><div style="font-size:34px">${L.ic}</div><div><h3 style="margin:0;font-size:21px">${esc(e.test?e.title:(e.cleared?'Снято: ':'')+(e.state||L.name))}</h3><div style="color:var(--mut)">${new Date(e.ts).toLocaleString('ru-RU')}</div></div></div>
+   <div class="kv"><span>Этаж</span><b>${esc(e.floor||(pos&&pos.plan.name)||'—')}</b><span>Помещение</span><b>${esc(e.place||'—')}</b><span>Датчик</span><b>${esc(e.device||'—')}</b><span>Адрес</span><b>${esc(e.deviceName||'—')}</b><span>Зона</span><b>${e.zoneNo?e.zoneNo+' · '+esc(e.zone||''):'—'}</b>${e.test?'<span>Текст</span><b>'+esc(e.body)+'</b>':''}</div>
+   ${pos&&pos.plan?`<button class="btn gold" style="width:100%" onclick="openPlanFor('${esc(e.id)}')">🗺 Показать на плане · ${esc(pos.plan.name)}</button>`:''}`)}
+function sheet(h){$('#sheetc').innerHTML=h;$('#sheet').classList.add('on');$('#scrim').classList.add('on')}
+function closeSheet(){$('#sheet').classList.remove('on');$('#scrim').classList.remove('on')}
+$('#scrim').onclick=closeSheet;
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
+
+/* ---------- mini plan on alarm screen ---------- */
+function drawMini(){const m=$('#mini');if(!m)return;const e=activeAlarms().find(x=>x.id===m.dataset.ev)||activeAlarms()[0];const p=devPos(e);if(!p)return;const img=m.querySelector('img');const pin=m.querySelector('.pin');
+  const place=()=>{const r=m.getBoundingClientRect();const W=p.plan.w,H=p.plan.h;const s=Math.max(r.width/W*1.25,r.height/H);img.style.width=W*s+'px';img.style.height=H*s+'px';let x=r.width/2-p.x*W*s,y=r.height/2-p.y*H*s;x=Math.min(0,Math.max(r.width-W*s,x));y=Math.min(0,Math.max(r.height-H*s,y));img.style.left=x+'px';img.style.top=y+'px';pin.style.left=(x+p.x*W*s)+'px';pin.style.top=(y+p.y*H*s)+'px'};
+  img.complete?place():img.onload=place; m.onclick=()=>openPlanFor(e.id)}
+
+/* ---------- routing / render ---------- */
+let pendingFocus=null;
+function go(v,focus){S.view=v;pendingFocus=focus||null;if(v==='events'){S.seen=Date.now();ls.set('seen',S.seen)}render();$('#main').scrollTop=0}
+function render(){
+  if(!S.site){return}
+  $('#nav').classList.remove('hidden');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
+  const nb=S.events.filter(e=>e.ts>S.seen&&rank(e.level)>=2&&!e.test).length; const bd=$('#evbd'); bd.textContent=nb; bd.classList.toggle('hidden',!nb||S.view==='events');
+  if(S.view==='plans'&&$('#stage')&&!pendingFocus&&render._v==='plans'){ // keep zoom while refreshing
+    const x=PZ.x,y=PZ.y,s=PZ.s; $('#main').innerHTML='<div class="view">'+V.plans()+'</div>'; $('#pw')._b=0; drawPlan(); PZ.x=x;PZ.y=y;PZ.s=s;applyPZ(); render._v='plans'; return }
+  $('#main').innerHTML='<div class="view">'+V[S.view]()+'</div>';
+  render._v=S.view;
+  if(S.view==='plans'){ drawPlan(pendingFocus); pendingFocus=null; const c=document.querySelector('#pchips .chip.on'); c&&c.scrollIntoView({inline:'center',block:'nearest'}) }
+  if(S.view==='home') drawMini();
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+
+/* ---------- onboarding ---------- */
+const isStandalone = ()=>window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function obInstall(){
+  $('#nav').classList.add('hidden');
+  $('#main').innerHTML=`<div class="ob view"><img class="logo" src="icons/icon-192.png" alt=""><h2>Fire Monitor</h2>
+   <p>Чтобы уведомления о пожаре приходили на iPhone, установите приложение на экран «Домой».</p>
+   <div class="steps"><div class="step"><b>1</b><div>Нажмите кнопку <b style="all:unset;color:var(--gold2)">«Поделиться»</b> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f7dc8e" stroke-width="2" style="vertical-align:-3px"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v8h14v-8"/></svg> внизу Safari</div></div>
+   <div class="step"><b>2</b><div>Выберите <b style="all:unset;color:var(--gold2)">«На экран „Домой“»</b> и нажмите «Добавить»</div></div>
+   <div class="step"><b>3</b><div>Откройте <b style="all:unset;color:var(--gold2)">Fire Monitor</b> с экрана «Домой» и введите код с компьютера ресепшена</div></div></div>
+   <p style="font-size:13px">Нужен iOS 16.4 или новее. Открывайте ссылку именно в Safari.</p>
+   <button class="btn" onclick="obCode(true)" style="margin-top:6px">Продолжить без установки</button></div>`;
+}
+function obCode(force){
+  $('#nav').classList.add('hidden');
+  $('#main').innerHTML=`<div class="ob view"><img class="logo" src="icons/icon-192.png" alt=""><h2>Код объекта</h2>
+   <p>Код показан на компьютере ресепшена в программе агента (страница «Fire Monitor — агент»).</p>
+   <input class="codein" id="code" maxlength="14" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+   <div class="err" id="err"></div><button class="btn gold" id="go" style="width:100%">Подключить</button></div>`;
+  const inp=$('#code'); inp.oninput=()=>{const p=inp.selectionStart;inp.value=fmtCode(inp.value)}; inp.focus();
+  $('#go').onclick=async()=>{ $('#err').textContent=''; $('#go').textContent='Проверяю…';
+    try{ const site=await decryptSite(inp.value); S.code=normCode(inp.value); ls.set('code',S.code); kvSet('code',S.code); S.site=indexSite(site); obPush() }
+    catch(e){ $('#go').textContent='Подключить'; $('#err').textContent='Неверный код. Проверьте и попробуйте ещё раз.' } };
+}
+function obPush(){
+  $('#nav').classList.add('hidden');
+  const can='PushManager' in window&&'serviceWorker' in navigator;
+  $('#main').innerHTML=`<div class="ob view"><div class="ring" style="margin:0 auto 20px;width:150px;height:150px"><div class="core" style="inset:24px"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#f7dc8e" stroke-width="1.6"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 004 0"/></svg></div></div>
+   <h2>Включите уведомления</h2><p>iPhone покажет запрос — нажмите «Разрешить». Без этого тревоги не будут приходить.</p>
+   ${can?'':'<p class="err">На этом устройстве Web Push недоступен. Откройте приложение с экрана «Домой» на iPhone с iOS 16.4+.</p>'}
+   <button class="btn gold" style="width:100%" onclick="enablePush(true)">Разрешить уведомления</button>
+   <button class="btn" style="width:100%;margin-top:10px" onclick="finishOb()">Позже</button></div>`;
+}
+function finishOb(){S.view='home';relayPoll();render()}
+async function enablePush(fromOb){
+  if(DEMO){toast('В демо-режиме уведомления не подключаются');fromOb&&finishOb();return}
+  try{
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)) throw new Error('Откройте приложение с экрана «Домой» (iOS 16.4+)');
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted') throw new Error('Уведомления не разрешены. Включите: Настройки iPhone → Уведомления → Fire Monitor');
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64(CFG.vapid)});
+    await relaySend({type:'sub',sub:sub.toJSON(),name:deviceName(),app:location.origin+location.pathname.replace(/[^/]*$/,'')});
+    ls.set('subEndpoint',sub.endpoint);
+    toast('Готово! Через минуту придёт уведомление «Телефон подключён ✓»');
+    fromOb?finishOb():render();
+  }catch(e){toast(e.message||String(e));if(fromOb)setTimeout(finishOb,2500)}
+}
+async function testPush(){
+  if(DEMO){simulate();return}
+  try{await relaySend({type:'test',name:deviceName()});toast('Запрос отправлен. Уведомление придёт в течение минуты')}catch(e){toast('Нет интернета или сервер связи недоступен')}
+}
+async function unpair(){
+  if(!confirm('Отключить уведомления на этом телефоне?'))return;
+  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();if(sub){await relaySend({type:'unsub',sub:sub.toJSON()});await sub.unsubscribe()}}catch(e){}
+  ls.set('code','');kvSet('code','');location.reload();
+}
+function savePhone(v){S.phone=v.trim();ls.set('phone',S.phone);toast('Сохранено')}
+function deviceName(){const m=navigator.userAgent.match(/iPhone OS ([\d_]+)/);return (isIOS?'iPhone':'Устройство')+(m?' (iOS '+m[1].replace(/_/g,'.')+')':'')}
+function urlB64(s){const p='='.repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+
+/* ---------- demo ---------- */
+function simulate(){
+  const s=S.site; const d=s.devices.find(x=>x.t==='Дымовой датчик'&&x.z.length&&S.site.Z[x.z[0]]&&/этаж/.test(S.site.Z[x.z[0]].floor||'')&&x.p.length)||s.devices[0];
+  const z=s.Z[d.z[0]]||{};
+  const ev={t:'event',id:'demo-'+Date.now(),ts:Date.now(),level:'fire',state:'Пожар',stateCode:'Fire',floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'};
+  S.events.unshift(ev); S.view='home'; render(); toast('Демо: срабатывание датчика');
+  setTimeout(()=>{if(!S.events.includes(ev))return;},0);
+}
+function demoClear(){const a=activeAlarms();a.forEach(e=>S.events.unshift(Object.assign({},e,{id:e.id+'c',ts:Date.now(),cleared:true})));render();toast('Демо: тревога снята')}
+function demoData(){
+  const now=Date.now(), s=S.site, pick=(i)=>s.devices.filter(d=>d.z.length&&d.p.length)[i];
+  const mk=(i,lv,state,dt,extra)=>{const d=pick(i),z=s.Z[d.z[0]]||{};return Object.assign({t:'event',id:'d'+i+lv+dt,ts:now-dt*60e3,level:lv,state,floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'},extra||{})};
+  S.events=[mk(40,'fire','Пожар',62,{cleared:true}),mk(40,'fire','Пожар',75),mk(120,'malfunction','Запылённость',300),mk(7,'info','Устройство отключено',1440),
+    {t:'event',id:'dt',ts:now-1500e3,level:'info',test:true,state:'Проверка',title:'Телефон подключён ✓',body:'Уведомления о пожаре будут приходить на iPhone',source:'agent'}];
+  S.status={t:'status',ts:now-120e3,firesec:true,statesOk:true,devices:407,subs:1,disabled:5,active:[],hbMin:15};
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  S.phone=ls.get('phone')||CFG.phone||''; S.seen=+ls.get('seen')||0;
+  if('serviceWorker' in navigator && !DEMO){navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.addEventListener('message',async m=>{if(m.data&&m.data.type==='event'){await loadEvents();render()}});}
+  if(DEMO){ S.code='DEMO'; S.site=indexSite(window.FM_SITE_PLAIN||await (await fetch('site.json')).json()); demoData(); render(); document.body.insertAdjacentHTML('beforeend','<div class="demo-badge">ДЕМО</div>');
+    setTimeout(()=>{ if(S.view==='home') toast('Нажмите «Настройки → Проверить уведомление», чтобы увидеть тревогу') },1500); return }
+  const code=ls.get('code')||await kvGet('code');
+  if(!code){ if(isIOS&&!isStandalone()) obInstall(); else obCode(); return }
+  try{ S.code=code; S.site=indexSite(await decryptSite(code)); }catch(e){ obCode(); return }
+  const st=await kvGet('status'); if(st) S.status=st;
+  await loadEvents(); render(); relayPoll();
+  if(('Notification' in window)&&Notification.permission==='default'&&isStandalone()) setTimeout(()=>toast('Включите уведомления в «Настройках»'),1200);
+}
+setInterval(()=>{ if(document.visibilityState==='visible'&&S.site&&!DEMO) relayPoll() },15000);
+setInterval(()=>{ if(S.site&&S.view==='home') render() },30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.site){relayPoll()}});
+boot();
+</script>
+</body>
+</html>
