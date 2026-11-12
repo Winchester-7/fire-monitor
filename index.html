@@ -7,175 +7,325 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Fire Monitor">
-<meta name="theme-color" content="#0b0a0d">
+<meta name="theme-color" content="#1c1e26">
 <title>Fire Monitor</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
 <script src="config.js"></script>
 <style>
+/* =====================================================================
+   Golden Dragon Fire Monitor v2 — "Glass" design
+   Dark frosted glass over a blurred hotel interior, white metric cards,
+   orange accent, dock with magnification, toast pills, fade/rise motion.
+   ===================================================================== */
 :root{
-  --bg:#0b0a0d; --bg2:#121117; --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.07); --line:rgba(255,255,255,.08);
-  --txt:#f5f1e8; --mut:#a39d92; --dim:#6f6a63;
-  --gold:#e2b04a; --gold2:#f7dc8e; --gold3:#9c6a1c;
-  --fire:#ff3b30; --fire2:#ff6a3d; --warn:#ffb020; --ok:#34c759; --info:#6aa9ff; --mal:#c48cff;
+  --glass:rgba(28,30,38,.72); --glass-2:rgba(18,20,26,.6); --glass-row:rgba(255,255,255,.08);
+  --gline:rgba(255,255,255,.14); --gline2:rgba(255,255,255,.22);
+  --orange:#ff701e; --orange-h:#fa630f; --green:#22c55e; --pink:#ff3b71; --blue:#3b82f6; --violet:#a855f7; --amber:#f59e0b;
+  --fire:#ff3b30;
+  --ink:#1e293b; --ink-m:#64748b; --ink-l:#94a3b8;
+  --wt:#fff; --wt-m:rgba(255,255,255,.72); --wt-d:rgba(255,255,255,.5);
   --safe-t:env(safe-area-inset-top); --safe-b:env(safe-area-inset-bottom);
-  --r:22px;
+  --ease:cubic-bezier(.4,0,.2,1); --spring:cubic-bezier(.25,1,.5,1);
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#1c1e26;color:var(--wt);font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
 body{overflow:hidden}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+a{color:inherit}
 .hidden{display:none!important}
-#app{position:fixed;inset:0;display:flex;flex-direction:column}
-.bgfx{position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(120% 70% at 50% -10%,rgba(226,176,74,.16),transparent 60%),radial-gradient(80% 50% at 100% 100%,rgba(156,106,28,.10),transparent 60%),var(--bg);transition:background 1s}
-body.alarm .bgfx{background:radial-gradient(130% 80% at 50% 0%,rgba(255,59,48,.55),transparent 62%),radial-gradient(90% 60% at 50% 110%,rgba(255,106,61,.35),transparent 60%),#1a0606;animation:bgpulse 1.6s ease-in-out infinite}
-body.attn .bgfx{background:radial-gradient(130% 80% at 50% 0%,rgba(255,176,32,.35),transparent 62%),#140e05}
-@keyframes bgpulse{50%{filter:brightness(1.35)}}
-main{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(var(--safe-t) + 10px) 18px calc(var(--safe-b) + 96px)}
-.view{animation:fade .35s ease}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}}
 
-/* header */
-.top{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
-.top img{width:38px;height:38px;border-radius:11px;box-shadow:0 0 0 1px rgba(226,176,74,.35)}
-.brand{flex:1;min-width:0}
-.brand b{display:block;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold2);font-weight:700}
-.brand span{font-size:12px;color:var(--mut)}
-.pill{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:13px;color:var(--mut);white-space:nowrap}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
-.dot.ok{background:var(--ok);box-shadow:0 0 0 4px rgba(52,199,89,.15)}
-.dot.bad{background:var(--fire);box-shadow:0 0 0 4px rgba(255,59,48,.18);animation:blink 1s infinite}
-@keyframes blink{50%{opacity:.35}}
+/* ---------- background photo + tints ---------- */
+.bg{position:fixed;inset:-20px;z-index:0;background:#2a2622 url(bg.jpg) center/cover no-repeat;transition:filter .8s var(--ease)}
+.tint{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.25));transition:background .8s var(--ease)}
+body.night .bg{filter:brightness(.45) saturate(.8)}
+body.alarm .tint{background:radial-gradient(130% 70% at 50% 0%,rgba(255,59,48,.65),rgba(120,10,6,.55) 60%,rgba(40,0,0,.6));animation:bgpulse 1.6s ease-in-out infinite}
+body.attn .tint{background:radial-gradient(130% 70% at 50% 0%,rgba(255,140,30,.45),rgba(60,30,0,.45))}
+@keyframes bgpulse{50%{opacity:.6}}
 
-/* calm hero */
-.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 6px}
-.ring{position:relative;width:212px;height:212px;margin:8px 0 22px}
-.ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,var(--gold3),var(--gold2),var(--gold),var(--gold3),var(--gold2),var(--gold3));animation:spin 14s linear infinite;-webkit-mask:radial-gradient(circle,transparent 61%,#000 62%,#000 66%,transparent 67%);mask:radial-gradient(circle,transparent 61%,#000 62%,#000 66%,transparent 67%)}
-.ring::after{content:"";position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle at 50% 35%,rgba(52,199,89,.22),rgba(52,199,89,.04) 60%,transparent 70%);animation:breathe 4s ease-in-out infinite}
-.ring .core{position:absolute;inset:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#1d1a14,#0d0c0f 70%);box-shadow:inset 0 0 0 1px rgba(226,176,74,.25),0 20px 60px rgba(0,0,0,.6)}
-.ring .core svg{width:74px;height:74px}
+/* ---------- main glass card ---------- */
+#app{position:fixed;inset:0;z-index:1;display:flex;justify-content:center}
+main{position:absolute;top:calc(var(--safe-t) + 6px);left:8px;right:8px;bottom:8px;
+  background:var(--glass);backdrop-filter:blur(36px) saturate(190%);-webkit-backdrop-filter:blur(36px) saturate(190%);
+  border:1.5px solid var(--gline);border-radius:32px;box-shadow:0 24px 60px rgba(0,0,0,.35);
+  overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  padding:20px 16px calc(var(--safe-b) + 104px);transition:background .5s var(--ease),border-color .5s,box-shadow .5s}
+main::-webkit-scrollbar{display:none}
+body.night main{background:rgba(14,15,20,.84)}
+body.alarm main{border-color:rgba(255,120,100,.55);box-shadow:0 0 0 1px rgba(255,59,48,.25),0 24px 70px rgba(255,59,48,.35)}
+@media (min-width:700px){main{left:50%;right:auto;width:540px;transform:translateX(-50%);top:24px;bottom:24px}}
+
+/* ---------- motion ---------- */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes toastFade{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes grow{from{transform:scaleY(.05)}}
+@keyframes draw{from{stroke-dashoffset:var(--len,600)}to{stroke-dashoffset:0}}
+@keyframes fadeArea{from{opacity:0}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes breathe{50%{transform:scale(1.06);opacity:.7}}
-.hero h1{margin:0;font-size:32px;letter-spacing:-.02em;font-weight:750}
-.hero p{margin:6px 0 0;color:var(--mut);font-size:15px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0 16px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 10px;text-align:center}
-.stat b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em}
-.stat span{font-size:12px;color:var(--mut)}
-.stat.warn b{color:var(--warn)} .stat.bad b{color:var(--fire)}
+@keyframes breathe{50%{transform:scale(1.07);opacity:.65}}
+@keyframes ecg{to{stroke-dashoffset:-240}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:none;opacity:1}}
+@keyframes blink{50%{opacity:.35}}
+.view{animation:fadeIn .25s ease}
+.anim .rv{animation:rise .55s var(--spring) both}
+.anim .rv:nth-child(1){animation-delay:.02s}.anim .rv:nth-child(2){animation-delay:.07s}.anim .rv:nth-child(3){animation-delay:.12s}
+.anim .rv:nth-child(4){animation-delay:.17s}.anim .rv:nth-child(5){animation-delay:.22s}.anim .rv:nth-child(6){animation-delay:.27s}
+.anim .rv:nth-child(7){animation-delay:.32s}.anim .rv:nth-child(8){animation-delay:.37s}.anim .rv:nth-child(n+9){animation-delay:.42s}
+.anim .bars i{animation:grow .7s var(--spring) both;transform-origin:bottom}
+.anim .bars i:nth-child(2){animation-delay:.05s}.anim .bars i:nth-child(3){animation-delay:.1s}.anim .bars i:nth-child(4){animation-delay:.15s}
+.anim .bars i:nth-child(5){animation-delay:.2s}.anim .bars i:nth-child(6){animation-delay:.25s}.anim .bars i:nth-child(7){animation-delay:.3s}
+.anim .bars i:nth-child(n+8){animation-delay:.35s}
+.anim .drawl{stroke-dasharray:var(--len,600);animation:draw 1.2s var(--ease) both .15s}
+.anim .area{animation:fadeArea 1s ease both .5s}
+.anim .peak{animation:pop .45s var(--spring) both 1.1s}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
-.sect{margin:22px 2px 10px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;display:flex;justify-content:space-between;align-items:center}
-.sect a{color:var(--gold);text-transform:none;letter-spacing:0;font-size:14px}
+/* ---------- header ---------- */
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 2px 16px}
+.hdr h2{font-size:21px;font-weight:500;letter-spacing:-.2px;line-height:1.2;color:rgba(255,255,255,.95)}
+.hdr h2 strong{font-weight:700;color:#fff}
+.hdr p{font-size:12.5px;color:var(--wt-m);margin-top:3px;display:flex;align-items:center;gap:6px}
+.hbtns{display:flex;gap:8px;flex:none}
+.gbtn{width:40px;height:40px;border-radius:50%;background:var(--glass-2);border:1px solid var(--gline);display:grid;place-items:center;color:rgba(255,255,255,.88);position:relative;transition:all .18s ease;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.gbtn:active{transform:scale(.92);background:rgba(255,255,255,.18)}
+.gbtn svg{width:18px;height:18px}
+.gbtn .nd{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px rgba(28,30,38,.9)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--wt-d);flex:none;display:inline-block}
+.dot.ok{background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.22)}
+.dot.bad{background:var(--fire);box-shadow:0 0 0 3px rgba(255,59,48,.25);animation:blink 1s infinite}
 
-/* event rows */
+/* ---------- white cards ---------- */
+.wcard{background:#fff;color:var(--ink);border-radius:20px;border:1px solid rgba(255,255,255,.9);box-shadow:0 4px 15px rgba(0,0,0,.08);transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.tap:active{transform:translateY(-2px) scale(.985);box-shadow:0 8px 22px rgba(0,0,0,.16)}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.met{padding:12px 13px;height:112px;display:flex;flex-direction:column;justify-content:space-between;border-radius:18px;text-align:left;width:100%}
+.met .mt{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--ink)}
+.badge{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none}
+.badge svg{width:14px;height:14px}
+.badge.orange{background:#fff3ec;color:var(--orange)}.badge.pink{background:#fdf2f4;color:var(--pink)}
+.badge.green{background:#f0fdf4;color:var(--green)}.badge.blue{background:#eff6ff;color:var(--blue)}
+.mg{height:36px;display:flex;align-items:center;justify-content:center}
+.mb{display:flex;align-items:baseline;gap:4px;white-space:nowrap;overflow:hidden}
+.mv{font-size:19px;font-weight:700;letter-spacing:-.3px}
+.mv.orange{color:var(--orange)}.mv.pink{color:var(--pink)}.mv.green{color:var(--green)}.mv.blue{color:var(--blue)}.mv.grey{color:var(--ink-l)}
+.mu{font-size:11px;font-weight:500;color:var(--ink-m);overflow:hidden;text-overflow:ellipsis}
+.bars{display:flex;align-items:flex-end;gap:5px;height:32px}
+.bars i{display:block;width:4px;border-radius:3px;background:currentColor;opacity:.9}
+.bars i:nth-child(even){opacity:.55}
+
+/* chart card */
+.chart{padding:13px 14px 10px;margin-bottom:12px}
+.ch-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.ch-h b{font-size:14px;font-weight:700}
+.ch-h small{display:block;font-size:11px;color:var(--ink-l);font-weight:500;margin-top:1px}
+.seg{display:flex;background:#f8fafc;border:1px solid #e2e8f0;border-radius:99px;padding:2px}
+.seg button{font-size:11px;font-weight:600;color:var(--ink-m);padding:3px 10px;border-radius:99px;transition:all .2s var(--ease)}
+.seg button.on{background:var(--orange);color:#fff;box-shadow:0 2px 8px rgba(255,112,30,.4)}
+.chart svg{display:block;width:100%;height:150px;overflow:visible}
+.chart text{font-size:9.5px;fill:#94a3b8;font-family:inherit}
+
+/* hero (status) card */
+.hero{padding:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;min-height:170px;position:relative;overflow:hidden}
+.hero .ht{display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;gap:12px;z-index:2;min-width:0}
+.hero h3{font-size:17px;font-weight:700;line-height:1.25;color:var(--ink)}
+.hero h3 small{display:block;font-size:12px;font-weight:500;color:var(--ink-m);margin-top:3px}
+.hs{display:flex;gap:18px}
+.hs b{display:block;font-size:17px;font-weight:700;color:var(--ink)}
+.hs b span{font-size:12px;font-weight:500;color:var(--ink-m)}
+.hs small{font-size:10.5px;color:var(--ink-l)}
+.ring{position:relative;width:128px;height:128px;flex:none}
+.ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#ffd2b3,var(--orange),#ffb27a,#ffe6d6,var(--orange),#ffd2b3);animation:spin 12s linear infinite;-webkit-mask:radial-gradient(circle,transparent 60%,#000 61%,#000 67%,transparent 68%);mask:radial-gradient(circle,transparent 60%,#000 61%,#000 67%,transparent 68%)}
+.ring::after{content:"";position:absolute;inset:12px;border-radius:50%;background:radial-gradient(circle at 50% 40%,rgba(34,197,94,.28),rgba(34,197,94,.05) 60%,transparent 72%);animation:breathe 4s ease-in-out infinite}
+.ring .core{position:absolute;inset:24px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#fff,#f4f6fa 70%);box-shadow:0 10px 26px rgba(15,23,42,.14),inset 0 0 0 1px #eef1f6;z-index:1}
+.ring .core svg{width:46px;height:46px}
+
+/* section header */
+.sect{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px}
+.sect .st{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#fff}
+.sect .st::before{content:"";width:3.5px;height:16px;border-radius:99px;background:var(--orange)}
+.sect a,.sect button{font-size:12px;font-weight:600;color:var(--wt-m);text-decoration:none;transition:color .15s}
+.sect a:active{color:#fff}
+
+/* floor cards (horizontal) */
+.floors{display:flex;gap:10px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.floors::-webkit-scrollbar{display:none}
+.fl{flex:none;width:200px;height:100px;border-radius:18px;padding:12px 13px;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;scroll-snap-align:start;overflow:hidden;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.fl:active{transform:translateY(-2px) scale(.98)}
+.fl.w{background:#fff;color:var(--ink);box-shadow:0 4px 15px rgba(0,0,0,.08)}
+.fl.o{background:var(--orange);color:#fff;box-shadow:0 8px 24px rgba(255,112,30,.35)}
+.fl.r{background:linear-gradient(135deg,#ff5a3c,#e0241a);color:#fff;box-shadow:0 8px 26px rgba(255,59,48,.5)}
+.fl .fi{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fl .fi b{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl .fi small{font-size:10px;line-height:1.3;opacity:.75}
+.pillday{display:inline-block;align-self:flex-start;font-size:10px;font-weight:600;padding:2px 9px;border-radius:99px;margin-top:4px}
+.fl.w .pillday{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+.fl.o .pillday,.fl.r .pillday{background:#fff;color:var(--orange)}
+.fl.r .pillday{color:#e0241a}
+.thumb{width:58px;height:58px;border-radius:50%;flex:none;background:#eef1f6 center/cover no-repeat;box-shadow:0 6px 16px rgba(0,0,0,.18),0 0 0 3px rgba(255,255,255,.85)}
+
+/* dark glass rows (events) */
 .list{display:flex;flex-direction:column;gap:8px}
-.ev{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;background:var(--card);border:1px solid var(--line);border-radius:18px;text-align:left;width:100%}
-.ev .ic{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:var(--card2)}
+.ev{display:flex;align-items:center;gap:11px;padding:10px 11px;width:100%;text-align:left;background:var(--glass-row);border:1px solid rgba(255,255,255,.1);border-radius:18px;transition:background .18s ease,transform .18s ease}
+.ev:active{background:rgba(255,255,255,.16);transform:scale(.99)}
+.ev .ic{width:44px;height:44px;border-radius:14px;flex:none;display:grid;place-items:center;font-size:20px;background:rgba(255,255,255,.12)}
 .ev .tx{flex:1;min-width:0}
-.ev .t1{font-weight:650;font-size:15px}
-.ev .t2{color:var(--mut);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ev .tm{color:var(--dim);font-size:12px;white-space:nowrap;margin-top:2px}
-.lv-fire .ic{background:rgba(255,59,48,.18)} .lv-fire .t1{color:#ff8a80}
-.lv-attention .ic,.lv-alarm .ic{background:rgba(255,176,32,.16)} .lv-attention .t1,.lv-alarm .t1{color:#ffd27a}
-.lv-malfunction .ic{background:rgba(196,140,255,.15)}
-.lv-cleared .ic{background:rgba(52,199,89,.15)}
-.empty{color:var(--dim);text-align:center;padding:26px 0;font-size:14px}
+.tag{display:inline-block;font-size:9.5px;font-weight:700;padding:1.5px 7px;border-radius:99px;background:rgba(255,255,255,.18);color:#fff;margin-bottom:3px}
+.ev .t1{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .t2{font-size:11.5px;color:var(--wt-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .rt{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none}
+.ev .tm{font-size:10.5px;color:var(--wt-d)}
+.more3{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center}
+.lv-fire .ic{background:rgba(255,59,48,.28)} .lv-fire .tag{background:var(--fire)}
+.lv-attention .ic,.lv-alarm .ic{background:rgba(255,112,30,.28)} .lv-attention .tag,.lv-alarm .tag{background:var(--orange)}
+.lv-malfunction .ic{background:rgba(59,130,246,.28)} .lv-malfunction .tag{background:var(--blue)}
+.lv-cleared .ic{background:rgba(34,197,94,.26)} .lv-cleared .tag{background:var(--green)}
+.lv-info .tag{background:rgba(255,255,255,.22)}
+.empty{color:var(--wt-d);text-align:center;padding:24px 8px;font-size:13.5px;background:var(--glass-row);border-radius:18px;border:1px dashed rgba(255,255,255,.14)}
 
-/* ALARM */
-.alarmbox{text-align:center;padding:6px 0 0}
-.siren{position:relative;width:150px;height:150px;margin:10px auto 18px}
-.siren span{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,120,100,.7);animation:wave 1.8s ease-out infinite}
-.siren span:nth-child(2){animation-delay:.6s}.siren span:nth-child(3){animation-delay:1.2s}
-.siren i{position:absolute;inset:28px;border-radius:50%;background:radial-gradient(circle at 50% 35%,#ff7a5c,#ff3b30 55%,#a3130c);display:grid;place-items:center;font-style:normal;font-size:46px;box-shadow:0 0 60px rgba(255,59,48,.8)}
-@keyframes wave{from{transform:scale(.55);opacity:1}to{transform:scale(1.35);opacity:0}}
-.alarmbox .kind{font-size:15px;letter-spacing:.32em;font-weight:800;color:#ffd0c8}
-.alarmbox .floor{font-size:56px;font-weight:800;letter-spacing:-.03em;line-height:1.02;margin:6px 0 2px}
-.alarmbox .place{font-size:26px;font-weight:650}
-.alarmbox .dev{margin-top:10px;color:#ffd9d2;font-size:15px}
-.alarmbox .when{margin-top:4px;color:rgba(255,220,210,.7);font-size:14px}
-.mini{position:relative;margin:18px 0 0;border-radius:var(--r);overflow:hidden;background:#171717;height:190px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-.mini img{position:absolute;max-width:none;transform-origin:0 0}
-.mini .pin{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--fire);box-shadow:0 0 0 6px rgba(255,59,48,.35);animation:pinp 1s infinite}
-@keyframes pinp{50%{box-shadow:0 0 0 16px rgba(255,59,48,0)}}
-.mini .cap{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.7);color:#fff;font-size:12px;padding:5px 9px;border-radius:9px}
-.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 14px;border-radius:16px;font-weight:650;font-size:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);text-decoration:none;color:inherit}
-.btn.gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1406;border:0}
-.btn.white{background:#fff;color:#a3130c;border:0}
-.btn.wide{grid-column:1/-1}
-.more{margin-top:14px}
+/* profile panel (settings) */
+.prof{display:flex;align-items:center;gap:12px;margin:2px 2px 14px}
+.prof .av{width:50px;height:50px;border-radius:50%;padding:2px;background:conic-gradient(var(--orange),#ffd2b3,var(--orange));flex:none}
+.prof .av img{width:100%;height:100%;border-radius:50%;display:block;border:2px solid #1c1e26}
+.prof b{font-size:16px;display:block}.prof small{font-size:12px;color:var(--wt-m)}
+.gpanel{background:var(--glass-row);border:1px solid rgba(255,255,255,.12);border-radius:20px}
+.triple{display:grid;grid-template-columns:repeat(3,1fr);padding:12px 4px;margin-bottom:12px}
+.triple div{text-align:center;border-left:1px solid rgba(255,255,255,.12)}
+.triple div:first-child{border-left:0}
+.triple b{display:block;font-size:17px;font-weight:700}.triple small{font-size:11px;color:var(--wt-m)}
+.rows .row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid rgba(255,255,255,.08)}
+.rows .row:first-child{border-top:0}
+.rows .l{flex:1;min-width:0;font-size:14px;font-weight:600}
+.rows .l small{display:block;font-size:12px;font-weight:400;color:var(--wt-m);margin-top:1px}
+.rows input{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:8px 10px;color:#fff;font:inherit;font-size:14px;text-align:right;outline:none;width:150px;min-width:0}
+.rows input:focus{border-color:var(--orange)}
+.themesw{display:flex;gap:4px;background:rgba(15,17,24,.65);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:4px}
+.themesw button{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.6);transition:all .2s ease}
+.themesw button.on{background:var(--orange);color:#fff;box-shadow:0 2px 8px rgba(255,112,30,.5)}
+.themesw svg{width:14px;height:14px}
 
-/* PLANS */
-.chips{display:flex;gap:8px;overflow-x:auto;margin:0 -18px 14px;padding:0 18px 4px;scrollbar-width:none}
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 18px;border-radius:99px;font-size:14.5px;font-weight:700;text-decoration:none;transition:all .2s ease;width:100%}
+.btn:active{transform:translateY(1px) scale(.98)}
+.btn.or{background:var(--orange);color:#fff;box-shadow:0 4px 14px rgba(255,112,30,.4)}
+.btn.or:active{background:var(--orange-h)}
+.btn.gh{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18)}
+.btn.wh{background:#fff;color:#c0180f;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.btn.sm{width:auto;padding:8px 14px;font-size:12.5px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.btns .wide{grid-column:1/-1}
+
+/* calendar (events) */
+.cal{padding:12px 12px 8px;margin-bottom:4px}
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 4px}
+.cal-h b{font-size:14.5px;font-weight:700;text-transform:capitalize}
+.cal-h .nv{display:flex;gap:6px}
+.cal-h .nv button{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;color:#fff;transition:background .15s}
+.cal-h .nv button:active{background:var(--orange)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);row-gap:4px;text-align:center}
+.cal-g .wd{font-size:10.5px;color:var(--wt-d);padding:2px 0 4px}
+.cal-g button{height:30px;margin:0 auto;width:34px;border-radius:99px;font-size:12px;font-weight:500;color:rgba(255,255,255,.88);position:relative;transition:all .18s ease}
+.cal-g button.has::after{content:"";position:absolute;bottom:2px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--orange)}
+.cal-g button.mal::after{background:var(--blue)}
+.cal-g button.today{background:var(--green);color:#fff;font-weight:700}
+.cal-g button.firey{background:var(--pink);color:#fff;font-weight:700}
+.cal-g button.sel{background:var(--orange);color:#fff;font-weight:700;box-shadow:0 3px 10px rgba(255,112,30,.5)}
+.cal-g button.has.today::after,.cal-g button.has.sel::after,.cal-g button.firey::after{background:#fff}
+.cal-g button:disabled{visibility:hidden}
+
+/* chips */
+.chips{display:flex;gap:6px;overflow-x:auto;margin:0 -16px 12px;padding:2px 16px 4px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;padding:9px 14px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px;color:var(--mut);white-space:nowrap;position:relative}
-.chip.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1b1406;border-color:transparent;font-weight:650}
-.chip .bd{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--fire);box-shadow:0 0 0 2px var(--bg)}
-.planwrap{position:relative;height:calc(100vh - 310px);min-height:340px;border-radius:var(--r);overflow:hidden;background:#171717;touch-action:none;box-shadow:inset 0 0 0 1px var(--line)}
+.chip{flex:none;padding:7px 14px;border-radius:99px;background:var(--glass-2);border:1px solid var(--gline);font-size:12.5px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap;position:relative;transition:all .2s ease}
+.chip.on{background:var(--orange);color:#fff;border-color:transparent;box-shadow:0 2px 10px rgba(255,112,30,.45)}
+.chip .bd{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--fire);box-shadow:0 0 0 2px #1c1e26;animation:blink 1s infinite}
+
+/* plans */
+.planwrap{position:relative;height:calc(100vh - 330px);height:calc(100dvh - 330px);min-height:320px;border-radius:22px;overflow:hidden;background:#141414;touch-action:none;box-shadow:0 4px 15px rgba(0,0,0,.12);border:3px solid #fff}
 .planwrap .stage{position:absolute;left:0;top:0;transform-origin:0 0}
 .planwrap img{display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
-.d{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--gold);border:2px solid #fff8e6;box-shadow:0 0 10px rgba(226,176,74,.7),0 1px 3px rgba(0,0,0,.5)}
+.d{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--orange);border:2px solid #fff;box-shadow:0 0 8px rgba(255,112,30,.6),0 1px 3px rgba(0,0,0,.5)}
 .d.off{background:#9a958c}
-.d.mal{background:var(--mal)}
-.d.att{background:var(--warn);width:18px;height:18px;margin:-9px 0 0 -9px}
+.d.mal{background:var(--blue)}
+.d.att{background:var(--amber);width:18px;height:18px;margin:-9px 0 0 -9px}
 .d.fire{background:var(--fire);width:20px;height:20px;margin:-10px 0 0 -10px;animation:pinp 1s infinite;z-index:3}
-.d.sel{outline:3px solid #f7dc8e;outline-offset:2px}
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 2px 0;color:var(--mut);font-size:12px}
+.d.sel{outline:3px solid var(--orange);outline-offset:2px}
+@keyframes pinp{50%{box-shadow:0 0 0 14px rgba(255,59,48,0)}0%{box-shadow:0 0 0 0 rgba(255,59,48,.6)}}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin:12px 2px 0;color:var(--wt-m);font-size:11.5px}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .zoombtns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:5}
-.zoombtns button{width:38px;height:38px;border-radius:12px;background:rgba(20,18,22,.82);color:#fff;font-size:20px;backdrop-filter:blur(10px)}
+.zoombtns button{width:38px;height:38px;border-radius:50%;background:rgba(28,30,38,.82);color:#fff;font-size:19px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.18);transition:transform .15s var(--spring)}
+.zoombtns button:active{transform:scale(.88);background:var(--orange)}
+.pcap{position:absolute;left:10px;bottom:10px;z-index:5;background:rgba(28,30,38,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid rgba(255,255,255,.18)}
 
-/* sheet */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;opacity:0;pointer-events:none;transition:.25s}
+/* ALARM */
+.alarm-card{border-radius:26px;padding:18px 16px 16px;text-align:center;background:linear-gradient(160deg,rgba(255,90,60,.35),rgba(160,15,10,.35));border:1.5px solid rgba(255,150,130,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.siren{position:relative;width:116px;height:116px;margin:0 auto 10px}
+.siren span{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,170,150,.8);animation:wave 1.8s ease-out infinite}
+.siren span:nth-child(2){animation-delay:.6s}.siren span:nth-child(3){animation-delay:1.2s}
+.siren i{position:absolute;inset:22px;border-radius:50%;background:radial-gradient(circle at 50% 35%,#ff9a6c,var(--orange) 45%,#d4180e);display:grid;place-items:center;font-style:normal;font-size:40px;box-shadow:0 0 50px rgba(255,90,40,.85)}
+@keyframes wave{from{transform:scale(.55);opacity:1}to{transform:scale(1.4);opacity:0}}
+.alarm-card .kind{display:inline-block;font-size:12px;letter-spacing:.3em;font-weight:800;color:#fff;background:var(--fire);padding:4px 12px 4px 15px;border-radius:99px;box-shadow:0 4px 14px rgba(255,59,48,.5)}
+.alarm-card .floor{font-size:46px;font-weight:800;letter-spacing:-.03em;line-height:1.02;margin:10px 0 2px}
+.alarm-card .place{font-size:23px;font-weight:650}
+.alarm-card .dev{margin-top:8px;color:#ffe1da;font-size:13.5px}
+.alarm-card .when{margin-top:3px;color:rgba(255,225,215,.75);font-size:12.5px}
+.mini{position:relative;margin:12px 0 0;border-radius:20px;overflow:hidden;background:#fff;height:180px;box-shadow:0 10px 30px rgba(0,0,0,.35);border:3px solid #fff}
+.mini img{position:absolute;max-width:none;transform-origin:0 0}
+.mini .pin{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--fire);border:2px solid #fff;animation:pinp 1s infinite}
+
+/* bottom sheet = glass modal */
+.scrim{position:fixed;inset:0;background:rgba(10,12,18,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:40;opacity:0;pointer-events:none;transition:opacity .25s ease}
 .scrim.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:#17151b;border-radius:26px 26px 0 0;padding:10px 20px calc(var(--safe-b) + 22px);transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1);border-top:1px solid var(--line);max-height:86vh;overflow:auto}
+.sheet{position:fixed;left:8px;right:8px;bottom:calc(var(--safe-b) + 8px);z-index:41;background:rgba(28,30,38,.94);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1.5px solid rgba(255,255,255,.18);border-radius:28px;padding:10px 18px 20px;transform:translateY(calc(100% + 40px));transition:transform .38s cubic-bezier(.2,.9,.25,1);max-height:84vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.5)}
 .sheet.on{transform:none}
-.sheet .grab{width:40px;height:5px;border-radius:3px;background:#3a3740;margin:0 auto 14px}
-.kv{display:grid;grid-template-columns:110px 1fr;gap:9px 12px;font-size:15px;margin:14px 0}
-.kv span{color:var(--mut)}
+@media (min-width:700px){.sheet{left:50%;right:auto;width:500px;margin-left:-250px}}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:0 auto 12px}
+.sheet h3{font-size:19px;font-weight:700}
+.sheet .sub{color:var(--wt-m);font-size:13px}
+.kv{display:grid;grid-template-columns:104px 1fr;gap:9px 12px;font-size:14px;margin:14px 0;background:var(--glass-row);border-radius:16px;padding:12px 14px}
+.kv span{color:var(--wt-m)}
 
-/* tabbar */
-nav{position:fixed;left:12px;right:12px;bottom:calc(var(--safe-b) + 10px);z-index:20;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(24,22,28,.78);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);border:1px solid var(--line);border-radius:24px;padding:7px}
-nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border-radius:17px;color:var(--dim);font-size:11px;font-weight:600;position:relative}
-nav button svg{width:24px;height:24px}
-nav button.on{color:var(--gold2);background:rgba(226,176,74,.1)}
-nav .bd{position:absolute;top:4px;right:calc(50% - 20px);min-width:17px;height:17px;border-radius:9px;background:var(--fire);color:#fff;font-size:10px;line-height:17px;padding:0 4px}
+/* dock (bottom nav) */
+.dock{position:fixed;left:50%;bottom:calc(var(--safe-b) + 18px);transform:translateX(-50%);z-index:20;display:flex;gap:8px;align-items:center;padding:7px;background:rgba(15,17,24,.78);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1.5px solid rgba(255,255,255,.18);border-radius:99px;box-shadow:0 14px 40px rgba(0,0,0,.45);touch-action:none;user-select:none;-webkit-user-select:none}
+.dock button{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.75);position:relative;transform-origin:center bottom;transition:transform .16s var(--spring),background .18s ease,box-shadow .18s ease,color .18s;will-change:transform}
+.dock button svg{width:21px;height:21px}
+.dock button.on{background:var(--orange);color:#fff;box-shadow:0 6px 16px rgba(255,112,30,.5)}
+.dock .tip{position:absolute;bottom:62px;left:50%;background:rgba(18,20,26,.94);color:#fff;font-size:11px;font-weight:600;padding:4px 11px;border-radius:99px;white-space:nowrap;pointer-events:none;border:1px solid rgba(255,255,255,.18);box-shadow:0 4px 14px rgba(0,0,0,.45);opacity:0;transform:translate(-50%,4px) scale(.92);transition:all .16s ease}
+.dock button.hv .tip{opacity:1;transform:translate(-50%,0) scale(1)}
+.dock .bd{position:absolute;top:2px;right:0;min-width:17px;height:17px;border-radius:9px;background:var(--fire);color:#fff;font-size:10px;font-weight:700;line-height:17px;padding:0 4px;box-shadow:0 0 0 2px rgba(15,17,24,.9)}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 92px);transform:translate(-50%,0);z-index:60;background:rgba(18,20,26,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.16);max-width:calc(100vw - 32px);text-align:center;display:none}
+.toast.on{display:block;animation:toastFade .25s ease}
 
 /* onboarding */
-.ob{min-height:100%;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:20px 6px}
-.ob img.logo{width:96px;height:96px;border-radius:26px;margin:0 auto 22px;box-shadow:0 20px 60px rgba(226,176,74,.25),0 0 0 1px rgba(226,176,74,.4)}
-.ob h2{font-size:28px;margin:0 0 8px;letter-spacing:-.02em}
-.ob p{color:var(--mut);margin:0 auto 22px;max-width:340px}
-.steps{text-align:left;display:flex;flex-direction:column;gap:10px;margin:6px 0 22px}
-.step{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
-.step b{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(226,176,74,.15);color:var(--gold2);font-size:14px}
-.codein{width:100%;font:700 26px ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.14em;text-align:center;text-transform:uppercase;padding:18px 10px;border-radius:18px;background:var(--card);border:1px solid rgba(226,176,74,.35);color:var(--txt);outline:none}
-.codein:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(226,176,74,.15)}
-.err{color:#ff8a80;font-size:14px;min-height:20px;margin:10px 0}
-.set{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
-.row:first-child{border-top:0}
-.row .l{flex:1}.row .l small{display:block;color:var(--mut);font-size:13px}
-.row input{background:transparent;border:0;color:var(--txt);font:inherit;text-align:right;outline:none;width:150px;min-width:0}
-.toast{position:fixed;left:50%;top:calc(var(--safe-t) + 12px);transform:translate(-50%,-140%);z-index:60;background:rgba(30,28,34,.95);border:1px solid var(--line);padding:11px 16px;border-radius:16px;font-size:14px;transition:.35s;max-width:90vw;backdrop-filter:blur(10px)}
-.toast.on{transform:translate(-50%,0)}
-.demo-badge{position:fixed;top:calc(var(--safe-t) + 6px);right:10px;z-index:30;font-size:11px;padding:4px 8px;border-radius:8px;background:rgba(226,176,74,.18);color:var(--gold2)}
-@media (min-width:700px){main{max-width:520px;margin:0 auto;width:100%}nav{max-width:480px;margin:0 auto}}
+.ob{min-height:100%;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:10px 4px}
+.ob .logo{width:92px;height:92px;border-radius:26px;margin:0 auto 18px;box-shadow:0 14px 40px rgba(255,112,30,.35),0 0 0 1.5px rgba(255,255,255,.3)}
+.ob h2{font-size:26px;margin:0 0 8px;letter-spacing:-.02em}
+.ob p{color:var(--wt-m);margin:0 auto 18px;max-width:340px;font-size:14px}
+.steps{text-align:left;display:flex;flex-direction:column;gap:8px;margin:4px 0 18px}
+.step{display:flex;gap:12px;align-items:center;padding:12px 14px;font-size:14px}
+.step b.n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--orange);color:#fff;font-size:13px;box-shadow:0 3px 10px rgba(255,112,30,.45)}
+.hl{color:var(--orange);font-weight:700}
+.codein{width:100%;font:700 24px ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.14em;text-align:center;text-transform:uppercase;padding:16px 10px;border-radius:20px;background:#fff;border:2px solid #fff;color:var(--ink);outline:none;box-shadow:0 4px 15px rgba(0,0,0,.1);transition:border-color .2s,box-shadow .2s}
+.codein:focus{border-color:var(--orange);box-shadow:0 0 0 4px rgba(255,112,30,.25)}
+.err{color:#ffb4a8;font-size:13.5px;min-height:20px;margin:10px 0}
+.demo-badge{position:fixed;top:calc(var(--safe-t) + 1px);left:50%;transform:translateX(-50%);z-index:30;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:99px;background:var(--orange);color:#fff}
 </style>
 </head>
 <body>
-<div class="bgfx"></div>
+<div class="bg"></div><div class="tint"></div>
 <div id="app">
   <main id="main"></main>
-  <nav id="nav" class="hidden">
-    <button data-v="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>Статус</button>
-    <button data-v="events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 004 0"/></svg>События<span class="bd hidden" id="evbd"></span></button>
-    <button data-v="plans"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>Этажи</button>
-    <button data-v="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Настройки</button>
-  </nav>
 </div>
+<nav id="nav" class="dock hidden">
+  <button data-v="home"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7.5" height="7.5" rx="2.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2.2"/></svg><span class="tip">Обзор</span></button>
+  <button data-v="events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2.5"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="tip">События</span><span class="bd hidden" id="evbd"></span></button>
+  <button data-v="plans"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg><span class="tip">Этажи 3D</span></button>
+  <button data-v="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span class="tip">Настройки</span></button>
+</nav>
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet"><div class="grab"></div><div id="sheetc"></div></div>
 <div class="toast" id="toast"></div>
@@ -192,7 +342,7 @@ const LV = {
   info:{ic:'ℹ️',name:'Информация',cls:'lv-info'}
 };
 const rank = l=>({fire:5,attention:4,alarm:3,malfunction:2,info:1}[l]||0);
-const S = {code:null, site:null, events:[], status:null, view:'home', plan:null, filter:'all', lastPoll:0, phone:'', seen:0};
+const S = {code:null, site:null, events:[], status:null, view:'home', plan:null, filter:'all', lastPoll:0, phone:'', seen:0, range:'week', day:null, calM:null, theme:'day'};
 const ls = {get:k=>{try{return localStorage.getItem(k)}catch(e){return null}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 
 /* ---------- IndexedDB (shared with service worker) ---------- */
@@ -219,6 +369,7 @@ function indexSite(s){
   s.D={}; s.devices.forEach(d=>s.D[d.g]=d);
   s.P={}; s.plans.forEach(p=>s.P[p.id]=p);
   s.PN={}; s.plans.forEach(p=>s.PN[p.name]=p);
+  s.PC={}; s.devices.forEach(d=>{const seen={};d.p.forEach(q=>{if(!seen[q[0]]){seen[q[0]]=1;s.PC[q[0]]=(s.PC[q[0]]||0)+1}})});
   return s;
 }
 
@@ -226,6 +377,8 @@ function indexSite(s){
 function ago(ts){const s=Math.max(0,(Date.now()-ts)/1000);if(s<45)return 'только что';if(s<3600)return Math.round(s/60)+' мин назад';if(s<86400)return Math.round(s/3600)+' ч назад';return new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}
 const hm = ts=>new Date(ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 function dayLabel(ts){const d=new Date(ts),t=new Date();const y=new Date(Date.now()-864e5);if(d.toDateString()===t.toDateString())return 'Сегодня';if(d.toDateString()===y.toDateString())return 'Вчера';return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}
+const dayKey = ts=>{const d=new Date(ts);return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()};
+function greet(){const h=new Date().getHours();return h<5?'Доброй ночи':h<12?'Доброе утро':h<18?'Добрый день':h<23?'Добрый вечер':'Доброй ночи'}
 
 /* ---------- relay (ntfy) ---------- */
 async function relayPoll(){
@@ -252,12 +405,12 @@ async function loadEvents(){
 
 /* ---------- derived state ---------- */
 function online(){
-  const st=S.status; if(DEMO) return {ok:true,txt:'Ресепшен на связи · только что'};
-  if(!st) return {ok:false,txt:'Ожидание связи с ресепшеном'};
+  const st=S.status; if(DEMO) return {ok:true,txt:'Ресепшен на связи · только что',short:'только что'};
+  if(!st) return {ok:false,txt:'Ожидание связи с ресепшеном',short:'ожидание'};
   const lim=((st.hbMin||15)*1.6+3)*60e3, age=Date.now()-st.ts;
-  if(age>lim) return {ok:false,txt:'Нет связи с ресепшеном · '+ago(st.ts)};
-  if(!st.firesec) return {ok:false,txt:'FireSec не запущен на ресепшене'};
-  return {ok:true,txt:'Ресепшен на связи · '+ago(st.ts)};
+  if(age>lim) return {ok:false,txt:'Нет связи с ресепшеном · '+ago(st.ts),short:ago(st.ts)};
+  if(!st.firesec) return {ok:false,txt:'FireSec не запущен на ресепшене',short:'FireSec выкл.'};
+  return {ok:true,txt:'Ресепшен на связи · '+ago(st.ts),short:ago(st.ts)};
 }
 function activeAlarms(){
   // Prefer the agent's status snapshot; add newer events not yet in it.
@@ -270,60 +423,148 @@ function activeAlarms(){
 }
 const keyOf = e=>(e.guid||('z'+e.zoneNo))+'|'+(e.stateCode||e.state);
 function devPos(e){
-  const s=S.site; if(!s) return null;
+  const s=S.site; if(!s||!e) return null;
   const d=e.guid&&s.D[e.guid]; if(d&&d.p&&d.p.length){const p=d.p[0];return {plan:s.P[p[0]],x:p[1],y:p[2]}}
   const z=e.zoneNo&&s.Z[e.zoneNo]; if(z&&z.pos&&z.pos.length){const p=z.pos[0];return {plan:s.P[p.plan],x:p.x,y:p.y}}
   return null;
 }
 
+/* ---------- small svg helpers ---------- */
+const IC = {
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 004 0"/></svg>',
+  sensor:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c.6 2.6 3.8 4.2 3.8 7.8A3.8 3.8 0 0112 13.6a3.8 3.8 0 01-3.8-3.8c0-1.4.6-2.4 1.3-3.2.1 1.1.8 1.9 1.7 1.9 1.1 0 1.6-.9 1.3-2.2C12.2 5.1 11.8 3.6 12 2z"/><rect x="5" y="15.5" width="14" height="5" rx="2.5"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3.5v5.5c0 4.6-3.3 8-8 9-4.7-1-8-4.4-8-9V6.5z"/><path d="M9 12l2 2 4-4"/></svg>',
+  wrench:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/></svg>',
+  dots:'<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><g stroke="currentColor" stroke-width="2"><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></g></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg>',
+  left:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  right:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>'
+};
+function barsSVG(vals,color){const mx=Math.max(1,...vals);return `<div class="bars" style="color:${color}">${vals.map(v=>`<i style="height:${Math.max(12,Math.round(v/mx*100))}%"></i>`).join('')}</div>`}
+function ecgSVG(ok){const c=ok?'#ff3b71':'#cbd5e1';return `<svg width="110" height="34" viewBox="0 0 110 34"><path d="M0 20h22l5-9 6 19 6-26 6 22 4-6h20l4-6 5 10 4-4h28" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ${ok?'stroke-dasharray="120 120" style="animation:ecg 2.4s linear infinite"':''}/></svg>`}
+function gaugeSVG(frac){const r=24,L=Math.PI*r,v=Math.max(0,Math.min(1,frac));return `<svg width="70" height="38" viewBox="0 0 70 38"><path d="M11 33a24 24 0 0148 0" fill="none" stroke="#e2e8f0" stroke-width="6" stroke-linecap="round"/><path class="drawl" style="--len:${L.toFixed(1)}" d="M11 33a24 24 0 0148 0" fill="none" stroke="#22c55e" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(L*v).toFixed(1)} ${L.toFixed(1)}"/></svg>`}
+
+/* activity chart: real event counts, smoothed */
+function chartData(){
+  const ev=S.events.filter(e=>!e.test), now=new Date();
+  if(S.range==='day'){
+    const bins=new Array(8).fill(0), start=Date.now()-24*3600e3;
+    ev.forEach(e=>{if(e.ts>=start){const i=Math.min(7,Math.floor((e.ts-start)/(3*3600e3)));bins[i]++}});
+    const lab=bins.map((_,i)=>{const d=new Date(start+(i+1)*3*3600e3);return String(d.getHours()).padStart(2,'0')+':00'});
+    return {vals:bins,lab};
+  }
+  const days=[],lab=[];
+  for(let i=6;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i);days.push(dayKey(d));lab.push(d.toLocaleDateString('ru-RU',{weekday:'short'}).replace('.',''))}
+  const vals=days.map(k=>ev.filter(e=>dayKey(e.ts)===k).length);
+  return {vals,lab};
+}
+function chartSVG(){
+  const {vals,lab}=chartData(), W=320,H=150,pl=26,pr=8,pt=26,pb=20, n=vals.length;
+  const mx=Math.max(4,...vals), xs=i=>pl+(W-pl-pr)*i/(n-1), ys=v=>pt+(H-pt-pb)*(1-v/mx);
+  const P=vals.map((v,i)=>[xs(i),ys(v)]);
+  let d=`M${P[0][0]},${P[0][1]}`;
+  for(let i=1;i<n;i++){const [x0,y0]=P[i-1],[x1,y1]=P[i],cx=(x0+x1)/2;d+=` C${cx},${y0} ${cx},${y1} ${x1},${y1}`}
+  const area=d+` L${P[n-1][0]},${H-pb} L${P[0][0]},${H-pb} Z`;
+  let grid='';for(let k=0;k<=4;k++){const y=pt+(H-pt-pb)*k/4;grid+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="3 4"/><text x="0" y="${y+3}">${Math.round(mx*(1-k/4))}</text>`}
+  const mi=vals.indexOf(Math.max(...vals)), [px,py]=P[mi], tot=vals.reduce((a,b)=>a+b,0);
+  const word=v=>v%10===1&&v%100!==11?'событие':(v%10>=2&&v%10<=4&&(v%100<10||v%100>=20))?'события':'событий';
+  const peak=vals[mi]>0?`<g class="peak" style="transform-origin:${px}px ${py}px"><line x1="${px}" x2="${px}" y1="${py}" y2="${H-pb}" stroke="#ff701e" stroke-dasharray="2 3" opacity=".6"/><circle cx="${px}" cy="${py}" r="5" fill="#fff" stroke="#ff701e" stroke-width="2.5"/><rect x="${Math.min(W-78,Math.max(pl,px-38))}" y="${py-24}" width="76" height="17" rx="8.5" fill="#fff3ec" stroke="#ff701e"/><text x="${Math.min(W-78,Math.max(pl,px-38))+38}" y="${py-12.5}" text-anchor="middle" style="fill:#ff701e;font-weight:700">${vals[mi]} ${word(vals[mi])}</text></g>`:'';
+  return {tot, svg:`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff701e" stop-opacity=".28"/><stop offset="1" stop-color="#ff701e" stop-opacity="0"/></linearGradient></defs>${grid}
+    <path class="area" d="${area}" fill="url(#ga)"/><path class="drawl" style="--len:700" d="${d}" fill="none" stroke="#ff701e" stroke-width="2.6" stroke-linecap="round"/>
+    ${lab.map((l,i)=>`<text x="${xs(i)}" y="${H-4}" text-anchor="middle">${esc(l)}</text>`).join('')}${peak}</svg>`};
+}
+
 /* ---------- views ---------- */
 const V = {};
+function header(title,sub,extra){
+  return `<div class="hdr rv"><div style="min-width:0"><h2>${title}</h2><p>${sub}</p></div><div class="hbtns">${extra||''}</div></div>`;
+}
+function bellBtn(){const nb=newCount();return `<button class="gbtn" onclick="go('events')" aria-label="События">${IC.bell}${nb?'<i class="nd"></i>':''}</button>`}
+const newCount=()=>S.events.filter(e=>e.ts>S.seen&&rank(e.level)>=2&&!e.test).length;
+
 V.home = ()=>{
-  const al=activeAlarms(), on=online();
+  const al=activeAlarms(), on=online(), s=S.site;
   document.body.classList.toggle('alarm', al.some(a=>a.level==='fire'));
   document.body.classList.toggle('attn', !al.some(a=>a.level==='fire') && al.length>0);
-  const head = `<div class="top"><img src="icons/icon-192.png" alt=""><div class="brand"><b>Golden Dragon</b><span>Fire Monitor · ${esc(CFG.site)}</span></div></div>
-   <div style="text-align:center"><span class="pill"><i class="dot ${on.ok?'ok':'bad'}"></i>${esc(on.txt)}</span></div>`;
+  const sub=`<i class="dot ${on.ok?'ok':'bad'}"></i>${on.ok?'На связи · '+esc(on.short):esc(on.txt)}`;
   if(al.length){
     const a=al[0], L=LV[a.level]||LV.info, pos=devPos(a);
     const floor=a.floor||(pos&&pos.plan&&pos.plan.name)||'—';
-    return head+`<div class="alarmbox">
+    return header(`<strong>${a.level==='fire'?'Пожар!':'Внимание!'}</strong> 🚨`,sub,bellBtn())+`
+    <div class="alarm-card rv">
       <div class="siren"><span></span><span></span><span></span><i>${L.ic}</i></div>
       <div class="kind">${esc((a.state||L.name).toUpperCase())}</div>
       <div class="floor">${esc(floor)}</div>
       <div class="place">${esc(a.place||a.zone||'')}</div>
       <div class="dev">${esc(a.device||'')}${a.deviceName?' · '+esc(a.deviceName):''}</div>
       <div class="when">${hm(a.ts)} · ${ago(a.ts)}</div>
-      ${pos&&pos.plan&&pos.plan.img?`<div class="mini" id="mini" data-ev="${esc(a.id)}"><img src="${pos.plan.img}"><div class="pin"></div><div class="cap">${esc(pos.plan.name)}</div></div>`:''}
       <div class="btns">
-        ${pos?`<button class="btn white" onclick="openPlanFor('${esc(a.id)}')">🗺 На плане</button>`:''}
-        ${S.phone?`<a class="btn ${pos?'':'wide'}" href="tel:${esc(S.phone)}">📞 Ресепшен</a>`:`<button class="btn" onclick="go('settings')">📞 Телефон</button>`}
+        ${pos?`<button class="btn wh" onclick="openPlanFor('${esc(a.id)}')">🗺 На плане</button>`:''}
+        ${S.phone?`<a class="btn or ${pos?'':'wide'}" href="tel:${esc(S.phone)}">📞 Ресепшен</a>`:`<button class="btn gh ${pos?'':'wide'}" onclick="go('settings')">📞 Телефон</button>`}
       </div>
-      ${DEMO?`<button class="btn wide more" onclick="demoClear()">Демо: снять тревогу</button>`:''}
-      ${al.length>1?`<div class="sect"><span>Ещё активно: ${al.length-1}</span></div><div class="list">${al.slice(1).map(evRow).join('')}</div>`:''}
-    </div>`;
+      ${pos&&pos.plan&&pos.plan.img?`<div class="mini" id="mini" data-ev="${esc(a.id)}"><img src="${pos.plan.img}"><div class="pin"></div><div class="pcap">${esc(pos.plan.name)}</div></div>`:''}
+      ${DEMO?`<div class="btns"><button class="btn gh wide" onclick="demoClear()">Демо: снять тревогу</button></div>`:''}
+    </div>
+    ${al.length>1?`<div class="sect rv"><span class="st">Ещё активно: ${al.length-1}</span></div><div class="list">${al.slice(1).map(evRow).join('')}</div>`:''}`;
   }
   const st=S.status||{}, mal=(st.active||[]).filter(e=>e.level==='malfunction').length;
+  const total=st.devices||(s?s.devices.length:0), dis=st.disabled!=null?st.disabled:null;
+  const work=total?((total-(dis||0))/total):1;
+  const ch=chartSVG();
+  const plans=s.plans.slice().sort((a,b)=>planOrder(a)-planOrder(b));
+  const hot=new Set(al.map(a=>{const p=devPos(a);return p&&p.plan&&p.plan.id}));
+  const malDays=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=dayKey(d);malDays.push(S.events.filter(e=>e.level==='malfunction'&&dayKey(e.ts)===k).length)}
   const last=S.events.filter(e=>!e.test).slice(0,4);
-  return head+`<div class="hero">
-    <div class="ring"><div class="core">${shieldSVG()}</div></div>
-    <h1>Всё спокойно</h1><p>Пожарная сигнализация в норме</p></div>
-    <div class="stats">
-      <div class="stat"><b>${st.devices||(S.site?S.site.devices.length:'—')}</b><span>датчиков</span></div>
-      <div class="stat ${st.disabled?'warn':''}"><b>${st.disabled!=null?st.disabled:'—'}</b><span>отключено</span></div>
-      <div class="stat ${mal?'bad':''}"><b>${st.active?mal:'—'}</b><span>неисправн.</span></div>
-    </div>
-    <div class="sect"><span>Последние события</span><a onclick="go('events')">Все</a></div>
-    <div class="list">${last.length?last.map(evRow).join(''):'<div class="empty">Событий пока нет. Здесь появится всё, что увидит FireSec.</div>'}</div>`;
+  return header(`${greet()}, <strong>ресепшен</strong> 👋`,sub,themeSw(true)+bellBtn())+`
+   <div class="metrics">
+     <button class="wcard met tap rv" onclick="go('plans')"><div class="mt">Датчики<span class="badge orange">${IC.sensor}</span></div><div class="mg">${barsSVG(plans.map(p=>s.PC[p.id]||0),'#ff701e')}</div><div class="mb"><span class="mv orange">${total||'—'}</span><span class="mu">шт · ${s.plans.length} планов</span></div></button>
+     <button class="wcard met tap rv" onclick="go('settings')"><div class="mt">Связь<span class="badge pink">${IC.heart}</span></div><div class="mg">${ecgSVG(on.ok)}</div><div class="mb"><span class="mv ${on.ok?'pink':'grey'}">${on.ok?'онлайн':'нет'}</span><span class="mu">${esc(on.short)}</span></div></button>
+     <button class="wcard met tap rv" onclick="go('plans')"><div class="mt">В работе<span class="badge green">${IC.shield}</span></div><div class="mg">${gaugeSVG(work)}</div><div class="mb"><span class="mv green">${dis==null?'—':Math.round(work*100)+'%'}</span><span class="mu">${dis==null?'нет данных':'откл. '+dis}</span></div></button>
+     <button class="wcard met tap rv" onclick="S.filter='malfunction';go('events')"><div class="mt">Неисправности<span class="badge blue">${IC.wrench}</span></div><div class="mg">${barsSVG(malDays,'#3b82f6')}</div><div class="mb"><span class="mv blue">${st.active?mal:'—'}</span><span class="mu">активных</span></div></button>
+   </div>
+   <div class="wcard hero rv">
+     <div class="ht"><h3>Всё спокойно<small>Пожарная сигнализация в норме</small></h3>
+       <div class="hs"><div><b>${s.zones.length} <span>зон</span></b><small>FireSec</small></div><div><b>${ch.tot} <span>соб.</span></b><small>${S.range==='day'?'за сутки':'за неделю'}</small></div></div></div>
+     <div class="ring"><div class="core" style="color:#22c55e">${IC.shield}</div></div>
+   </div>
+   <div class="wcard chart rv"><div class="ch-h"><div><b>Активность</b><small>события FireSec</small></div><div class="seg"><button class="${S.range==='day'?'on':''}" onclick="setRange('day')">Сутки</button><button class="${S.range==='week'?'on':''}" onclick="setRange('week')">Неделя</button></div></div>${ch.svg}</div>
+   <div class="sect rv"><span class="st">Этажи</span><a onclick="go('plans')">все →</a></div>
+   <div class="floors rv">${plans.map((p,i)=>floorCard(p,hot.has(p.id),S.plan?S.plan===p.id:i===2)).join('')}</div>
+   <div class="sect rv"><span class="st">Последние события</span><a onclick="go('events')">все →</a></div>
+   <div class="list">${last.length?last.map(evRow).join(''):'<div class="empty rv">Событий пока нет. Здесь появится всё, что увидит FireSec.</div>'}</div>`;
 };
-function shieldSVG(){return `<svg viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7dc8e"/><stop offset="1" stop-color="#b07a24"/></linearGradient></defs><path d="M32 6l20 8v14c0 14-9 24-20 28C21 52 12 42 12 28V14z" fill="none" stroke="url(#g)" stroke-width="3"/><path d="M23 32l6 6 12-13" fill="none" stroke="#34c759" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+function planOrder(p){const m=/^(\d+)/.exec(p.name);if(/лобби/i.test(p.name))return 0.5;if(/^ground/i.test(p.name))return 0;return m?+m[1]:50}
+function floorCard(p,hot,on){
+  const n=S.site.PC[p.id]||0, cls=hot?'r':(on?'o':'w');
+  return `<button class="fl ${cls}" onclick="selPlan('${p.id}',1)"><div class="fi"><b>${esc(p.name)}</b><small>${hot?'Активная тревога!':(p.style==='3d'||p.style==='3D'?'3D-план этажа':'План этажа')}</small><span class="pillday">${n} датч.</span></div>${p.img?`<div class="thumb" style="background-image:url('${p.img}')"></div>`:''}</button>`;
+}
+function setRange(r){S.range=r;ls.set('range',r);render(true)}
+function themeSw(small){return `<div class="themesw"${small?' style="padding:3px"':''}><button class="${S.theme==='day'?'on':''}" onclick="setTheme('day')" aria-label="День">${IC.sun}</button><button class="${S.theme==='night'?'on':''}" onclick="setTheme('night')" aria-label="Ночь">${IC.moon}</button></div>`}
+function setTheme(t){S.theme=t;ls.set('theme',t);document.body.classList.toggle('night',t==='night');render();toast(t==='night'?'Ночной режим':'Дневной режим')}
+
 function evRow(e){
-  const L=e.cleared?{ic:'✅',cls:'lv-cleared'}:(LV[e.level]||LV.info);
+  const L=e.cleared?{ic:'✅',cls:'lv-cleared',name:'Снято'}:(LV[e.level]||LV.info);
   const where=[e.floor,e.place].filter(Boolean).join(', ')||e.zone||'';
   const t1=e.test?esc(e.title):(e.cleared?'Снято: '+esc(e.state):esc(e.state||L.name))+(where?' · '+esc(where):'');
   const t2=e.test?esc(e.body):esc([e.device,e.deviceName].filter(Boolean).join(' · '));
-  return `<button class="ev ${L.cls}" onclick="openEvent('${esc(e.id)}')"><div class="ic">${L.ic}</div><div class="tx"><div class="t1">${t1}</div><div class="t2">${t2||'&nbsp;'}</div></div><div class="tm">${hm(e.ts).slice(0,5)}</div></button>`;
+  const tg=e.test?'Проверка':L.name;
+  return `<button class="ev ${L.cls} rv" onclick="openEvent('${esc(e.id)}')"><div class="ic">${L.ic}</div><div class="tx"><span class="tag">${esc(tg)}</span><div class="t1">${t1}</div><div class="t2">${t2||'&nbsp;'}</div></div><div class="rt"><span class="more3">${IC.dots}</span><span class="tm">${hm(e.ts).slice(0,5)}</span></div></button>`;
 }
+function calendar(){
+  const now=new Date(); if(!S.calM) S.calM=new Date(now.getFullYear(),now.getMonth(),1);
+  const m=S.calM, y=m.getFullYear(), mo=m.getMonth(), first=(new Date(y,mo,1).getDay()+6)%7, dim=new Date(y,mo+1,0).getDate();
+  const by={}; S.events.forEach(e=>{if(e.test)return;const k=dayKey(e.ts);by[k]=Math.max(by[k]||0,rank(e.level))});
+  let cells='';for(let i=0;i<first;i++)cells+='<button disabled></button>';
+  for(let d=1;d<=dim;d++){const k=y+'-'+mo+'-'+d, r=by[k]||0, isT=k===dayKey(Date.now());
+    const c=[S.day===k?'sel':'', r>=5?'firey':'', !S.day||S.day!==k?(isT?'today':''):'', r&&r<5?'has':'', r===2?'mal':''].filter(Boolean).join(' ');
+    cells+=`<button class="${c}" onclick="pickDay('${k}')">${d}</button>`}
+  return `<div class="gpanel cal rv"><div class="cal-h"><b>${m.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}).replace(' г.','')}</b><div class="nv"><button onclick="calMove(-1)" aria-label="Назад">${IC.left}</button><button onclick="calMove(1)" aria-label="Вперёд">${IC.right}</button></div></div>
+    <div class="cal-g">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div></div>`;
+}
+function calMove(n){S.calM=new Date(S.calM.getFullYear(),S.calM.getMonth()+n,1);render()}
+function pickDay(k){S.day=S.day===k?null:k;render()}
 V.events = ()=>{
   document.body.classList.remove('alarm','attn');
   const F={all:'Все',fire:'Пожар и тревоги',malfunction:'Неисправности',info:'Прочее'};
@@ -331,40 +572,46 @@ V.events = ()=>{
   if(S.filter==='fire') ev=ev.filter(e=>rank(e.level)>=3);
   else if(S.filter==='malfunction') ev=ev.filter(e=>e.level==='malfunction');
   else if(S.filter==='info') ev=ev.filter(e=>rank(e.level)<=1);
-  let html=`<div class="top"><div class="brand"><b>События</b><span>Всё, что передал агент с ресепшена</span></div></div>
-   <div class="chips">${Object.entries(F).map(([k,v])=>`<button class="chip ${S.filter===k?'on':''}" onclick="S.filter='${k}';render()">${v}</button>`).join('')}</div>`;
-  if(!ev.length) return html+'<div class="empty">Нет событий</div>';
-  let day='';
-  ev.slice(0,300).forEach(e=>{const d=dayLabel(e.ts);if(d!==day){day=d;html+=`<div class="sect"><span>${d}</span></div>`}html+=evRow(e)});
-  return html.replace(/<\/button><div class="sect">/g,'</button><div class="sect">');
+  if(S.day) ev=ev.filter(e=>dayKey(e.ts)===S.day);
+  let html=header('<strong>События</strong>','Всё, что передал агент с ресепшена',bellBtn())+calendar()+
+   `<div class="chips rv" style="margin-top:12px">${Object.entries(F).map(([k,v])=>`<button class="chip ${S.filter===k?'on':''}" onclick="S.filter='${k}';render()">${v}</button>`).join('')}</div>`;
+  if(S.day) html+=`<div class="sect"><span class="st">${esc(dayLabel(ev[0]?ev[0].ts:dayTs(S.day)))}</span><button onclick="pickDay('${S.day}')">сбросить ✕</button></div>`;
+  if(!ev.length) return html+'<div class="empty rv">Нет событий</div>';
+  let day='', open=false;
+  ev.slice(0,300).forEach(e=>{const d=dayLabel(e.ts);if(d!==day){if(open)html+='</div>';day=d;if(!S.day)html+=`<div class="sect"><span class="st">${d}</span></div>`;html+='<div class="list">';open=true}html+=evRow(e)});
+  return html+(open?'</div>':'');
 };
+function dayTs(k){const [y,m,d]=k.split('-').map(Number);return new Date(y,m,d).getTime()}
 V.plans = ()=>{
   document.body.classList.remove('alarm','attn');
   const s=S.site; if(!s) return '<div class="empty">Нет данных объекта</div>';
   const al=activeAlarms(); const hot=new Set(al.map(a=>{const p=devPos(a);return p&&p.plan&&p.plan.id}));
   if(!S.plan){const h=al.map(devPos).find(p=>p&&p.plan);S.plan=h?h.plan.id:(s.plans.find(p=>p.img)||s.plans[0]).id}
-  return `<div class="top"><div class="brand"><b>Этажи и планы</b><span>${s.devices.length} датчиков на ${s.plans.length} планах</span></div></div>
-   <div class="chips" id="pchips">${s.plans.map(p=>`<button class="chip ${S.plan===p.id?'on':''}" onclick="selPlan('${p.id}')">${esc(p.name)}${hot.has(p.id)?'<span class="bd"></span>':''}</button>`).join('')}</div>
-   <div class="planwrap" id="pw"><div class="zoombtns"><button onclick="zoomBy(1.4)">+</button><button onclick="zoomBy(1/1.4)">−</button><button onclick="fitPlan()" style="font-size:14px">⤢</button></div><div class="stage" id="stage"></div></div>
-   <div class="legend"><span><i style="background:var(--gold)"></i>норма</span><span><i style="background:var(--fire)"></i>пожар</span><span><i style="background:var(--warn)"></i>внимание</span><span><i style="background:var(--mal)"></i>неисправность</span><span><i style="background:#9a958c"></i>отключён</span></div>`;
+  const plans=s.plans.slice().sort((a,b)=>planOrder(a)-planOrder(b));
+  const cur=s.P[S.plan];
+  return header('<strong>Этажи</strong> и планы',`${s.devices.length} датчиков на ${s.plans.length} планах`,bellBtn())+`
+   <div class="chips rv" id="pchips">${plans.map(p=>`<button class="chip ${S.plan===p.id?'on':''}" onclick="selPlan('${p.id}')">${esc(p.name)}${hot.has(p.id)?'<span class="bd"></span>':''}</button>`).join('')}</div>
+   <div class="planwrap rv" id="pw"><div class="zoombtns"><button onclick="zoomBy(1.4)">+</button><button onclick="zoomBy(1/1.4)">−</button><button onclick="fitPlan()" style="font-size:14px">⤢</button></div><div class="pcap">${esc(cur?cur.name:'')} · ${s.PC[S.plan]||0} датч.</div><div class="stage" id="stage"></div></div>
+   <div class="legend rv"><span><i style="background:var(--orange)"></i>норма</span><span><i style="background:var(--fire)"></i>пожар</span><span><i style="background:var(--amber)"></i>внимание</span><span><i style="background:var(--blue)"></i>неисправность</span><span><i style="background:#9a958c"></i>отключён</span></div>`;
 };
 V.settings = ()=>{
   document.body.classList.remove('alarm','attn');
   const perm=('Notification' in window)?Notification.permission:'unsupported';
   const pt={granted:'Включены ✓',denied:'Запрещены в настройках iPhone',default:'Не включены',unsupported:'Недоступны: откройте с экрана Домой'}[perm];
-  const on=online();
-  return `<div class="top"><div class="brand"><b>Настройки</b><span>Fire Monitor ${DEMO?'· демо':''}</span></div></div>
-   <div class="set">
-     <div class="row"><div class="l">Уведомления<small>${pt}</small></div>${perm!=='granted'&&perm!=='unsupported'?'<button class="btn gold" style="padding:9px 14px" onclick="enablePush()">Включить</button>':''}</div>
+  const on=online(), s=S.site;
+  return `<div class="prof rv"><div class="av"><img src="icons/icon-192.png" alt=""></div><div style="flex:1;min-width:0"><b>${esc(CFG.site)}</b><small>Fire Monitor · код ${esc(fmtCode(S.code||''))}${DEMO?' · демо':''}</small></div>${bellBtn()}</div>
+   <div class="gpanel triple rv"><div><b>${s.devices.length}</b><small>датчиков</small></div><div><b>${s.zones.length}</b><small>зон</small></div><div><b>${s.plans.length}</b><small>планов</small></div></div>
+   <div class="gpanel rows rv">
+     <div class="row"><div class="l">Уведомления<small>${pt}</small></div>${perm!=='granted'&&perm!=='unsupported'?'<button class="btn or sm" onclick="enablePush()">Включить</button>':''}</div>
      <div class="row"><div class="l">Связь с ресепшеном<small>${esc(on.txt)}</small></div><i class="dot ${on.ok?'ok':'bad'}"></i></div>
-     <div class="row"><div class="l">Код объекта<small>${esc(fmtCode(S.code||''))}</small></div></div>
+     <div class="row"><div class="l">Оформление<small>${S.theme==='night'?'Ночной режим':'Дневной режим'}</small></div>${themeSw()}</div>
      <div class="row"><div class="l">Телефон ресепшена<small>для кнопки «Позвонить»</small></div><input id="phone" inputmode="tel" placeholder="+996 …" value="${esc(S.phone)}" onchange="savePhone(this.value)"></div>
    </div>
-   <div class="btns"><button class="btn gold wide" onclick="testPush()">Проверить уведомление</button>
-   <button class="btn wide" onclick="relayPoll().then(()=>toast('Обновлено'))">Обновить данные</button></div>
-   <div class="sect"><span>Как это работает</span></div>
-   <div class="set"><div class="row"><div class="l" style="font-size:14px;color:var(--mut)">Агент на компьютере ресепшена только читает состояние FireSec и сразу отправляет уведомление на этот iPhone через интернет. В пожарной системе ничего не меняется. Если связь с ресепшеном пропадёт больше чем на ${Math.round(((S.status&&S.status.hbMin)||15)*1.6+3)} минут, на главном экране появится красный индикатор.</div></div></div>
-   <div class="btns"><button class="btn wide" style="color:#ff8a80" onclick="unpair()">Отключить этот телефон</button></div>`;
+   <div class="btns rv"><button class="btn or wide" onclick="testPush()">Проверить уведомление</button>
+   <button class="btn gh wide" onclick="relayPoll().then(()=>toast('Обновлено'))">Обновить данные</button></div>
+   <div class="sect rv"><span class="st">Как это работает</span></div>
+   <div class="gpanel rows rv"><div class="row"><div class="l" style="font-weight:400;font-size:13.5px;color:var(--wt-m)">Агент на компьютере ресепшена только читает состояние FireSec и сразу отправляет уведомление на этот iPhone через интернет. В пожарной системе ничего не меняется. Если связь с ресепшеном пропадёт больше чем на ${Math.round(((S.status&&S.status.hbMin)||15)*1.6+3)} минут, на главном экране появится красный индикатор.</div></div></div>
+   <div class="btns rv"><button class="btn gh wide" style="color:#ffb4a8" onclick="unpair()">Отключить этот телефон</button></div>`;
 };
 
 /* ---------- plan viewer with pinch/zoom ---------- */
@@ -380,7 +627,7 @@ function drawPlan(focus){
     const lv=states[d.g]; const c=lv==='fire'?'fire':(lv==='attention'||lv==='alarm')?'att':lv==='malfunction'?'mal':'';
     dots+=`<i class="d ${c} ${focus&&focus.g===d.g?'sel':''}" style="left:${q[1]*W}px;top:${q[2]*H}px" data-g="${d.g}"></i>`}));
   st.style.width=W+'px'; st.style.height=H+'px';
-  st.innerHTML=(p.img?`<img src="${p.img}" width="${W}" height="${H}">`:`<div style="width:${W}px;height:${H}px;background:#16141a"></div>`)+dots;
+  st.innerHTML=(p.img?`<img src="${p.img}" width="${W}" height="${H}">`:`<div style="width:${W}px;height:${H}px;background:#f1f5f9"></div>`)+dots;
   fitPlan();
   if(focus){const r=pw.getBoundingClientRect();PZ.s=PZ.s*2.2;PZ.x=r.width/2-focus.x*W*PZ.s;PZ.y=r.height/2-focus.y*H*PZ.s;applyPZ()}
   bindGestures(pw);
@@ -403,21 +650,21 @@ function bindGestures(el){
   el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
   el.addEventListener('wheel',e=>{e.preventDefault();const r=el.getBoundingClientRect();zoomBy(e.deltaY<0?1.15:1/1.15,e.clientX-r.left,e.clientY-r.top)},{passive:false});
 }
-function selPlan(id){S.plan=id;render()}
+function selPlan(id,nav){S.plan=id;if(nav)go('plans');else render(true)}
 function openPlanFor(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);const p=e&&devPos(e);if(!p)return;S.plan=p.plan.id;closeSheet();go('plans',{g:e.guid,x:p.x,y:p.y})}
 function devInfo(g){const d=S.site.D[g];if(!d)return;const z=d.z.map(n=>S.site.Z[n]).filter(Boolean)[0];
   const evs=S.events.filter(e=>e.guid===g).slice(0,5);
-  sheet(`<h3 style="margin:0 0 2px;font-size:21px">${esc(d.t)}</h3><div style="color:var(--mut)">${esc(d.n)}</div>
+  sheet(`<div style="display:flex;gap:12px;align-items:center"><span class="badge orange" style="width:44px;height:44px">${IC.sensor}</span><div style="min-width:0"><h3>${esc(d.t)}</h3><div class="sub">${esc(d.n)}</div></div></div>
    <div class="kv"><span>Этаж</span><b>${esc((z&&z.floor)||S.site.P[S.plan].name)}</b><span>Помещение</span><b>${esc(z?z.place:'—')}</b><span>Зона FireSec</span><b>${z?z.no+' · '+esc(z.name):'—'}</b></div>
-   ${evs.length?'<div class="sect"><span>События датчика</span></div><div class="list">'+evs.map(evRow).join('')+'</div>':''}`)}
+   ${evs.length?'<div class="sect"><span class="st">События датчика</span></div><div class="list">'+evs.map(evRow).join('')+'</div>':''}`)}
 function openEvent(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);if(!e)return;const L=e.cleared?{ic:'✅',name:'Снято'}:(LV[e.level]||LV.info);const pos=devPos(e);
-  sheet(`<div style="display:flex;gap:12px;align-items:center"><div style="font-size:34px">${L.ic}</div><div><h3 style="margin:0;font-size:21px">${esc(e.test?e.title:(e.cleared?'Снято: ':'')+(e.state||L.name))}</h3><div style="color:var(--mut)">${new Date(e.ts).toLocaleString('ru-RU')}</div></div></div>
+  sheet(`<div style="display:flex;gap:12px;align-items:center"><div style="font-size:30px;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.1);display:grid;place-items:center;flex:none">${L.ic}</div><div style="min-width:0"><h3>${esc(e.test?e.title:(e.cleared?'Снято: ':'')+(e.state||L.name))}</h3><div class="sub">${new Date(e.ts).toLocaleString('ru-RU')}</div></div></div>
    <div class="kv"><span>Этаж</span><b>${esc(e.floor||(pos&&pos.plan.name)||'—')}</b><span>Помещение</span><b>${esc(e.place||'—')}</b><span>Датчик</span><b>${esc(e.device||'—')}</b><span>Адрес</span><b>${esc(e.deviceName||'—')}</b><span>Зона</span><b>${e.zoneNo?e.zoneNo+' · '+esc(e.zone||''):'—'}</b>${e.test?'<span>Текст</span><b>'+esc(e.body)+'</b>':''}</div>
-   ${pos&&pos.plan?`<button class="btn gold" style="width:100%" onclick="openPlanFor('${esc(e.id)}')">🗺 Показать на плане · ${esc(pos.plan.name)}</button>`:''}`)}
-function sheet(h){$('#sheetc').innerHTML=h;$('#sheet').classList.add('on');$('#scrim').classList.add('on')}
+   ${pos&&pos.plan?`<button class="btn or" onclick="openPlanFor('${esc(e.id)}')">🗺 Показать на плане · ${esc(pos.plan.name)}</button>`:''}`)}
+function sheet(h){$('#sheetc').innerHTML=h;$('#sheet').scrollTop=0;$('#sheet').classList.add('on');$('#scrim').classList.add('on')}
 function closeSheet(){$('#sheet').classList.remove('on');$('#scrim').classList.remove('on')}
 $('#scrim').onclick=closeSheet;
-function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2600)}
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2500)}
 
 /* ---------- mini plan on alarm screen ---------- */
 function drawMini(){const m=$('#mini');if(!m)return;const e=activeAlarms().find(x=>x.id===m.dataset.ev)||activeAlarms()[0];const p=devPos(e);if(!p)return;const img=m.querySelector('img');const pin=m.querySelector('.pin');
@@ -426,41 +673,57 @@ function drawMini(){const m=$('#mini');if(!m)return;const e=activeAlarms().find(
 
 /* ---------- routing / render ---------- */
 let pendingFocus=null;
-function go(v,focus){S.view=v;pendingFocus=focus||null;if(v==='events'){S.seen=Date.now();ls.set('seen',S.seen)}render();$('#main').scrollTop=0}
-function render(){
+function go(v,focus){if(v!=='events')S.day=null;S.view=v;pendingFocus=focus||null;if(v==='events'){S.seen=Date.now();ls.set('seen',S.seen)}render(true);$('#main').scrollTop=0}
+function render(anim){
   if(!S.site){return}
   $('#nav').classList.remove('hidden');
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
-  const nb=S.events.filter(e=>e.ts>S.seen&&rank(e.level)>=2&&!e.test).length; const bd=$('#evbd'); bd.textContent=nb; bd.classList.toggle('hidden',!nb||S.view==='events');
-  if(S.view==='plans'&&$('#stage')&&!pendingFocus&&render._v==='plans'){ // keep zoom while refreshing
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
+  const nb=newCount(); const bd=$('#evbd'); bd.textContent=nb; bd.classList.toggle('hidden',!nb||S.view==='events');
+  const sc=$('#main').scrollTop;
+  if(S.view==='plans'&&$('#stage')&&!pendingFocus&&render._v==='plans'&&!anim){ // keep zoom while refreshing
     const x=PZ.x,y=PZ.y,s=PZ.s; $('#main').innerHTML='<div class="view">'+V.plans()+'</div>'; $('#pw')._b=0; drawPlan(); PZ.x=x;PZ.y=y;PZ.s=s;applyPZ(); render._v='plans'; return }
-  $('#main').innerHTML='<div class="view">'+V[S.view]()+'</div>';
+  const fresh=anim||render._v!==S.view;
+  $('#main').innerHTML='<div class="'+(fresh?'view anim':'')+'">'+V[S.view]()+'</div>';
+  if(!fresh) $('#main').scrollTop=sc;
   render._v=S.view;
   if(S.view==='plans'){ drawPlan(pendingFocus); pendingFocus=null; const c=document.querySelector('#pchips .chip.on'); c&&c.scrollIntoView({inline:'center',block:'nearest'}) }
   if(S.view==='home') drawMini();
 }
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+
+/* ---------- dock: tap + magnification while dragging a finger across ---------- */
+(function dock(){
+  const nav=$('#nav'), btns=[...nav.querySelectorAll('button')];
+  let hov=null, dragging=false, moved=false;
+  const scale=(i)=>{if(hov===null)return 1;const d=Math.abs(hov-i);return d===0?1.38:d===1?1.16:d===2?1.05:1};
+  const paint=()=>btns.forEach((b,i)=>{b.style.transform=`scale(${scale(i)}) translateY(${hov===null?0:-(scale(i)-1)*14}px)`;b.classList.toggle('hv',hov===i)});
+  const idxAt=x=>{let best=null,bd=1e9;btns.forEach((b,i)=>{const r=b.getBoundingClientRect();const d=Math.abs(r.left+r.width/2-x);if(d<bd){bd=d;best=i}});return best};
+  nav.addEventListener('pointerdown',e=>{dragging=true;moved=false;hov=idxAt(e.clientX);paint();try{nav.setPointerCapture(e.pointerId)}catch(x){}});
+  nav.addEventListener('pointermove',e=>{if(!dragging&&e.pointerType!=='mouse')return;const i=idxAt(e.clientX);if(i!==hov){hov=i;moved=true;paint()}});
+  const end=e=>{if(dragging&&hov!=null&&e.type==='pointerup'){const v=btns[hov].dataset.v;go(v)}dragging=false;hov=null;paint()};
+  nav.addEventListener('pointerup',end);nav.addEventListener('pointercancel',end);
+  nav.addEventListener('pointerleave',e=>{if(!dragging){hov=null;paint()}});
+})();
 
 /* ---------- onboarding ---------- */
 const isStandalone = ()=>window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 function obInstall(){
   $('#nav').classList.add('hidden');
-  $('#main').innerHTML=`<div class="ob view"><img class="logo" src="icons/icon-192.png" alt=""><h2>Fire Monitor</h2>
-   <p>Чтобы уведомления о пожаре приходили на iPhone, установите приложение на экран «Домой».</p>
-   <div class="steps"><div class="step"><b>1</b><div>Нажмите кнопку <b style="all:unset;color:var(--gold2)">«Поделиться»</b> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f7dc8e" stroke-width="2" style="vertical-align:-3px"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v8h14v-8"/></svg> внизу Safari</div></div>
-   <div class="step"><b>2</b><div>Выберите <b style="all:unset;color:var(--gold2)">«На экран „Домой“»</b> и нажмите «Добавить»</div></div>
-   <div class="step"><b>3</b><div>Откройте <b style="all:unset;color:var(--gold2)">Fire Monitor</b> с экрана «Домой» и введите код с компьютера ресепшена</div></div></div>
-   <p style="font-size:13px">Нужен iOS 16.4 или новее. Открывайте ссылку именно в Safari.</p>
-   <button class="btn" onclick="obCode(true)" style="margin-top:6px">Продолжить без установки</button></div>`;
+  $('#main').innerHTML=`<div class="ob view anim"><img class="logo rv" src="icons/icon-192.png" alt=""><h2 class="rv">Fire Monitor</h2>
+   <p class="rv">Чтобы уведомления о пожаре приходили на iPhone, установите приложение на экран «Домой».</p>
+   <div class="steps"><div class="wcard step rv"><b class="n">1</b><div>Нажмите кнопку <span class="hl">«Поделиться»</span> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff701e" stroke-width="2" style="vertical-align:-3px"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v8h14v-8"/></svg> внизу Safari</div></div>
+   <div class="wcard step rv"><b class="n">2</b><div>Выберите <span class="hl">«На экран „Домой“»</span> и нажмите «Добавить»</div></div>
+   <div class="wcard step rv"><b class="n">3</b><div>Откройте <span class="hl">Fire Monitor</span> с экрана «Домой» и введите код с компьютера ресепшена</div></div></div>
+   <p class="rv" style="font-size:12.5px">Нужен iOS 16.4 или новее. Открывайте ссылку именно в Safari.</p>
+   <button class="btn gh rv" onclick="obCode(true)">Продолжить без установки</button></div>`;
 }
 function obCode(force){
   $('#nav').classList.add('hidden');
-  $('#main').innerHTML=`<div class="ob view"><img class="logo" src="icons/icon-192.png" alt=""><h2>Код объекта</h2>
-   <p>Код показан на компьютере ресепшена в программе агента (страница «Fire Monitor — агент»).</p>
-   <input class="codein" id="code" maxlength="14" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
-   <div class="err" id="err"></div><button class="btn gold" id="go" style="width:100%">Подключить</button></div>`;
-  const inp=$('#code'); inp.oninput=()=>{const p=inp.selectionStart;inp.value=fmtCode(inp.value)}; inp.focus();
+  $('#main').innerHTML=`<div class="ob view anim"><img class="logo rv" src="icons/icon-192.png" alt=""><h2 class="rv">Код объекта</h2>
+   <p class="rv">Код показан на компьютере ресепшена в программе агента (страница «Fire Monitor — агент»).</p>
+   <input class="codein rv" id="code" maxlength="14" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+   <div class="err" id="err"></div><button class="btn or rv" id="go">Подключить</button></div>`;
+  const inp=$('#code'); inp.oninput=()=>{inp.value=fmtCode(inp.value)}; inp.focus();
   $('#go').onclick=async()=>{ $('#err').textContent=''; $('#go').textContent='Проверяю…';
     try{ const site=await decryptSite(inp.value); S.code=normCode(inp.value); ls.set('code',S.code); kvSet('code',S.code); S.site=indexSite(site); obPush() }
     catch(e){ $('#go').textContent='Подключить'; $('#err').textContent='Неверный код. Проверьте и попробуйте ещё раз.' } };
@@ -468,13 +731,13 @@ function obCode(force){
 function obPush(){
   $('#nav').classList.add('hidden');
   const can='PushManager' in window&&'serviceWorker' in navigator;
-  $('#main').innerHTML=`<div class="ob view"><div class="ring" style="margin:0 auto 20px;width:150px;height:150px"><div class="core" style="inset:24px"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#f7dc8e" stroke-width="1.6"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 004 0"/></svg></div></div>
-   <h2>Включите уведомления</h2><p>iPhone покажет запрос — нажмите «Разрешить». Без этого тревоги не будут приходить.</p>
+  $('#main').innerHTML=`<div class="ob view anim"><div class="ring rv" style="margin:0 auto 20px;width:150px;height:150px"><div class="core" style="color:#ff701e">${IC.bell}</div></div>
+   <h2 class="rv">Включите уведомления</h2><p class="rv">iPhone покажет запрос — нажмите «Разрешить». Без этого тревоги не будут приходить.</p>
    ${can?'':'<p class="err">На этом устройстве Web Push недоступен. Откройте приложение с экрана «Домой» на iPhone с iOS 16.4+.</p>'}
-   <button class="btn gold" style="width:100%" onclick="enablePush(true)">Разрешить уведомления</button>
-   <button class="btn" style="width:100%;margin-top:10px" onclick="finishOb()">Позже</button></div>`;
+   <button class="btn or rv" onclick="enablePush(true)">Разрешить уведомления</button>
+   <button class="btn gh rv" style="margin-top:10px" onclick="finishOb()">Позже</button></div>`;
 }
-function finishOb(){S.view='home';relayPoll();render()}
+function finishOb(){S.view='home';relayPoll();render(true)}
 async function enablePush(fromOb){
   if(DEMO){toast('В демо-режиме уведомления не подключаются');fromOb&&finishOb();return}
   try{
@@ -508,34 +771,36 @@ function simulate(){
   const s=S.site; const d=s.devices.find(x=>x.t==='Дымовой датчик'&&x.z.length&&S.site.Z[x.z[0]]&&/этаж/.test(S.site.Z[x.z[0]].floor||'')&&x.p.length)||s.devices[0];
   const z=s.Z[d.z[0]]||{};
   const ev={t:'event',id:'demo-'+Date.now(),ts:Date.now(),level:'fire',state:'Пожар',stateCode:'Fire',floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'};
-  S.events.unshift(ev); S.view='home'; render(); toast('Демо: срабатывание датчика');
-  setTimeout(()=>{if(!S.events.includes(ev))return;},0);
+  S.events.unshift(ev); S.view='home'; render(true); toast('Демо: срабатывание датчика');
 }
-function demoClear(){const a=activeAlarms();a.forEach(e=>S.events.unshift(Object.assign({},e,{id:e.id+'c',ts:Date.now(),cleared:true})));render();toast('Демо: тревога снята')}
+function demoClear(){const a=activeAlarms();a.forEach(e=>S.events.unshift(Object.assign({},e,{id:e.id+'c',ts:Date.now(),cleared:true})));render(true);toast('Демо: тревога снята')}
 function demoData(){
   const now=Date.now(), s=S.site, pick=(i)=>s.devices.filter(d=>d.z.length&&d.p.length)[i];
   const mk=(i,lv,state,dt,extra)=>{const d=pick(i),z=s.Z[d.z[0]]||{};return Object.assign({t:'event',id:'d'+i+lv+dt,ts:now-dt*60e3,level:lv,state,floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'},extra||{})};
   S.events=[mk(40,'fire','Пожар',62,{cleared:true}),mk(40,'fire','Пожар',75),mk(120,'malfunction','Запылённость',300),mk(7,'info','Устройство отключено',1440),
-    {t:'event',id:'dt',ts:now-1500e3,level:'info',test:true,state:'Проверка',title:'Телефон подключён ✓',body:'Уведомления о пожаре будут приходить на iPhone',source:'agent'}];
+    mk(60,'attention','Внимание',1440*2+200,{cleared:true}),mk(60,'attention','Внимание',1440*2+210),mk(15,'malfunction','Запылённость',1440*3+30),mk(90,'info','Устройство включено',1440*3+90),
+    mk(150,'malfunction','Обрыв линии',1440*4+60),mk(150,'malfunction','Обрыв линии',1440*4+80,{cleared:true}),mk(33,'info','Устройство отключено',1440*5+15),mk(200,'info','Устройство включено',1440*6+300),
+    {t:'event',id:'dt',ts:now-1500e3,level:'info',test:true,state:'Проверка',title:'Телефон подключён ✓',body:'Уведомления о пожаре будут приходить на iPhone',source:'agent'}].sort((a,b)=>b.ts-a.ts);
   S.status={t:'status',ts:now-120e3,firesec:true,statesOk:true,devices:407,subs:1,disabled:5,active:[],hbMin:15};
 }
 
 /* ---------- boot ---------- */
 async function boot(){
-  S.phone=ls.get('phone')||CFG.phone||''; S.seen=+ls.get('seen')||0;
+  S.phone=ls.get('phone')||CFG.phone||''; S.seen=+ls.get('seen')||0; S.range=ls.get('range')||'week';
+  S.theme=ls.get('theme')||'day'; document.body.classList.toggle('night',S.theme==='night');
   if('serviceWorker' in navigator && !DEMO){navigator.serviceWorker.register('sw.js').catch(()=>{});
     navigator.serviceWorker.addEventListener('message',async m=>{if(m.data&&m.data.type==='event'){await loadEvents();render()}});}
-  if(DEMO){ S.code='DEMO'; S.site=indexSite(window.FM_SITE_PLAIN||await (await fetch('site.json')).json()); demoData(); render(); document.body.insertAdjacentHTML('beforeend','<div class="demo-badge">ДЕМО</div>');
-    setTimeout(()=>{ if(S.view==='home') toast('Нажмите «Настройки → Проверить уведомление», чтобы увидеть тревогу') },1500); return }
+  if(DEMO){ S.code='DEMO'; S.site=indexSite(window.FM_SITE_PLAIN||await (await fetch('site.json')).json()); demoData(); render(true); document.body.insertAdjacentHTML('beforeend','<div class="demo-badge">ДЕМО</div>');
+    setTimeout(()=>{ if(S.view==='home') toast('Настройки → «Проверить уведомление» покажет тревогу') },1500); return }
   const code=ls.get('code')||await kvGet('code');
   if(!code){ if(isIOS&&!isStandalone()) obInstall(); else obCode(); return }
   try{ S.code=code; S.site=indexSite(await decryptSite(code)); }catch(e){ obCode(); return }
   const st=await kvGet('status'); if(st) S.status=st;
-  await loadEvents(); render(); relayPoll();
+  await loadEvents(); render(true); relayPoll();
   if(('Notification' in window)&&Notification.permission==='default'&&isStandalone()) setTimeout(()=>toast('Включите уведомления в «Настройках»'),1200);
 }
 setInterval(()=>{ if(document.visibilityState==='visible'&&S.site&&!DEMO) relayPoll() },15000);
-setInterval(()=>{ if(S.site&&S.view==='home') render() },30000);
+setInterval(()=>{ if(S.site&&S.view==='home'&&!$('#sheet').classList.contains('on')) render() },30000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.site){relayPoll()}});
 boot();
 </script>
