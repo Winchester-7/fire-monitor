@@ -1134,7 +1134,7 @@ async function ackAlarm(){
 }
 async function markFalse(id){
   haptic(); const ids=id?[id]:activeStates().filter(isAlarmEv).map(a=>a.id); if(!ids.length) return;
-  if(!confirm('Отметить как ложное срабатывание?\nЭто попадёт в тепловую карту. Сбросить тревогу может только ресепшен.')) return;
+  if(!DEMO&&!confirm('Отметить как ложное срабатывание?\nЭто попадёт в тепловую карту. Сбросить тревогу может только ресепшен.')) return;
   const ts=Date.now(), ev={t:'event',kind:'false',id:ts+'-false',ts,level:'info',ref:ids,by:myName(),state:'Ложное',source:'app'};
   S.events.unshift(ev); dbPut([ev]); render();
   if(!DEMO) try{await relaySend({type:'false',ids,name:myName()})}catch(e){}
