@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
 <script src="config.js"></script>
+<script src="exits.js"></script>
 <style>
 /* =====================================================================
    Golden Dragon Fire Monitor v2 — "Glass" design
@@ -313,6 +314,171 @@ body.alarm main{border-color:rgba(255,120,100,.55);box-shadow:0 0 0 1px rgba(255
 .codein:focus{border-color:var(--orange);box-shadow:0 0 0 4px rgba(255,112,30,.25)}
 .err{color:#ffb4a8;font-size:13.5px;min-height:20px;margin:10px 0}
 .demo-badge{position:fixed;top:calc(var(--safe-t) + 1px);left:50%;transform:translateX(-50%);z-index:30;font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:99px;background:var(--orange);color:#fff}
+
+/* =====================================================================
+   v3 — full-screen alarm, escalation timer, evacuation route, live status,
+   journal heat map, quiet malfunctions (yellow), siren
+   ===================================================================== */
+:root{--yellow:#facc15;--yellow-d:#ca8a04;--route:#22e37a;--att:#ff9f0a}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ---- live status hero ---- */
+.hero.live{align-items:stretch}
+.hero .lv-t{display:flex;align-items:center;gap:8px}
+.pulse{position:relative;width:12px;height:12px;flex:none;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(34,197,94,.9)}
+.pulse::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(34,197,94,.55);animation:ping 2s cubic-bezier(0,0,.2,1) infinite}
+.pulse.y{background:var(--yellow);box-shadow:0 0 12px rgba(250,204,21,.9)}.pulse.y::after{border-color:rgba(250,204,21,.6)}
+.pulse.r{background:var(--fire);box-shadow:0 0 12px rgba(255,59,48,.9)}.pulse.r::after{border-color:rgba(255,59,48,.6);animation-duration:1s}
+.pulse.g{background:#94a3b8;box-shadow:none}.pulse.g::after{display:none}
+@keyframes ping{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.7);opacity:0}}
+.clockbig{font-size:34px;font-weight:750;letter-spacing:-1px;line-height:1;color:var(--ink)}
+.clockbig small{font-size:15px;font-weight:600;color:var(--ink-l);letter-spacing:0;margin-left:1px}
+.datesm{font-size:11.5px;color:var(--ink-m);margin-top:3px;text-transform:capitalize}
+.link{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-m);background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:6px 9px;line-height:1.25}
+.link b{color:var(--ink);font-weight:700}
+.link.bad{background:#fff1f0;border-color:#ffd0cc;color:#b42318}.link.bad b{color:#b42318}
+.ring.off::before{filter:grayscale(1);opacity:.45;animation-duration:30s}.ring.off::after{background:radial-gradient(circle at 50% 40%,rgba(148,163,184,.3),transparent 70%)}
+.ring.warn::after{background:radial-gradient(circle at 50% 40%,rgba(250,204,21,.32),rgba(250,204,21,.05) 60%,transparent 72%)}
+
+/* ---- quiet malfunctions (yellow, no siren) ---- */
+.malbox{border-radius:22px;padding:12px;margin-bottom:12px;background:linear-gradient(160deg,rgba(250,204,21,.2),rgba(202,138,4,.12));border:1.5px solid rgba(250,204,21,.45)}
+.malbox .mh{display:flex;align-items:center;justify-content:space-between;margin:0 2px 8px;font-size:13.5px;font-weight:700;color:#fde68a}
+.malbox .mh small{font-weight:600;font-size:11px;color:rgba(253,230,138,.8);display:flex;align-items:center;gap:5px}
+.malbox .ev{background:rgba(0,0,0,.18)}
+.badge.yellow{background:#fefce8;color:var(--yellow-d)}
+.mv.yellow{color:var(--yellow-d)}
+.lv-malfunction .ic{background:rgba(250,204,21,.25)} .lv-malfunction .tag{background:var(--yellow);color:#422006}
+.lv-attention .ic,.lv-alarm .ic{background:rgba(255,159,10,.28)} .lv-attention .tag,.lv-alarm .tag{background:var(--att)}
+.lv-ack .ic{background:rgba(34,197,94,.26)} .lv-ack .tag{background:var(--green)}
+.lv-sound .ic{background:rgba(168,85,247,.28)} .lv-sound .tag{background:var(--violet)}
+.lv-reset .ic{background:rgba(59,130,246,.28)} .lv-reset .tag{background:var(--blue)}
+.cal-g button.mal::after{background:var(--yellow)}
+.d.mal{background:var(--yellow)}
+.d.att{background:var(--att)}
+.ev .t3{font-size:10.5px;color:#86efac;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---- FULL-SCREEN ALARM ---- */
+.ax{position:fixed;inset:0;z-index:70;display:none;color:#fff;overflow:hidden}
+.ax.on{display:block;animation:axIn .45s var(--spring)}
+@keyframes axIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+.ax-bg{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 18%,#ff4a2e 0%,#c3120a 45%,#4a0402 100%)}
+.ax-bg::before{content:"";position:absolute;inset:0;background:radial-gradient(90% 60% at 50% 30%,rgba(255,200,170,.55),transparent 70%);animation:axPulse 1.25s ease-in-out infinite}
+.ax-bg::after{content:"";position:absolute;inset:0;background:url(bg.jpg) center/cover;opacity:.08;mix-blend-mode:luminosity}
+.ax.att .ax-bg{background:radial-gradient(120% 80% at 50% 18%,#ffb02e 0%,#d9610a 45%,#4a1a02 100%)}
+@keyframes axPulse{0%,100%{opacity:.15}50%{opacity:1}}
+.ax.acked .ax-bg::before{animation-duration:2.6s}
+.ax-in{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:calc(var(--safe-t) + 10px) 16px calc(var(--safe-b) + 18px);display:flex;flex-direction:column;gap:12px;max-width:560px;margin:0 auto}
+.ax-in::-webkit-scrollbar{display:none}
+.ax-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ax-top button{height:36px;padding:0 12px;white-space:nowrap;border-radius:99px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.28);font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.ax-top button:active{transform:scale(.94)}
+.ax-clock{font-size:17px;font-weight:800;letter-spacing:.02em;padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3)}
+.ax-head{text-align:center;margin-top:2px}
+.ax-kind{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:900;letter-spacing:.32em;padding:6px 14px 6px 16px;border-radius:99px;background:#fff;color:#d0140b;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.ax.att .ax-kind{color:#c2570c}
+.ax-kind i{width:9px;height:9px;border-radius:50%;background:currentColor;animation:blink .7s infinite}
+.ax-floor{font-size:clamp(46px,15vw,72px);font-weight:900;letter-spacing:-.04em;line-height:.95;margin:12px 0 4px;text-shadow:0 6px 30px rgba(0,0,0,.25)}
+.ax-place{font-size:clamp(22px,6.6vw,30px);font-weight:750;line-height:1.15}
+.ax-dev{margin-top:6px;font-size:13.5px;color:rgba(255,235,228,.9)}
+.ax-timer{display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;border-radius:22px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.ax-ring{position:relative;width:64px;height:64px;flex:none}
+.ax-ring svg{width:64px;height:64px;transform:rotate(-90deg)}
+.ax-ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;font-weight:800;letter-spacing:.04em;color:rgba(255,255,255,.85)}
+.ax-since{font-size:38px;font-weight:850;letter-spacing:-1px;line-height:1}
+.ax-timer small{display:block;font-size:12px;color:rgba(255,235,228,.85);margin-top:3px}
+.ax-esc{font-size:12px;font-weight:700;margin-top:5px;padding:3px 9px;border-radius:10px;line-height:1.35;display:inline-block;background:rgba(255,255,255,.18)}
+.ax-esc.ok{background:#22c55e;color:#fff}
+.ax-esc.rep{background:#fff;color:#c0180f}
+.ax-plan{position:relative;height:clamp(190px,32vh,330px);border-radius:24px;overflow:hidden;background:#141414;border:3px solid #fff;box-shadow:0 14px 40px rgba(0,0,0,.4);flex:none}
+.ax-plan .stage{position:absolute;left:0;top:0;transform-origin:0 0;transition:transform 1.9s cubic-bezier(.65,0,.25,1)}
+.ax-plan .stage img{display:block}
+.ax-plan .pcap{display:flex;align-items:center;gap:6px}
+.ax-plan .pcap i{width:9px;height:9px;border-radius:50%;background:var(--route);box-shadow:0 0 8px var(--route)}
+.rsvg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.r-glow{fill:none;stroke:var(--route);stroke-linecap:round;stroke-linejoin:round;opacity:.28}
+.r-main{fill:none;stroke:var(--route);stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px rgba(34,227,122,.9))}
+.r-flow{fill:none;stroke:#eafff2;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
+.r-draw{animation:rdraw 1.5s cubic-bezier(.4,0,.2,1) both}
+@keyframes rdraw{from{stroke-dashoffset:var(--L)}to{stroke-dashoffset:0}}
+.r-flowa{animation:rflow 1s linear infinite}
+@keyframes rflow{to{stroke-dashoffset:calc(var(--P) * -1)}}
+@keyframes fin{from{opacity:0}to{opacity:.95}}
+.wave{fill:none;stroke:#ff3b30;transform-box:fill-box;transform-origin:center;animation:wavep 2.1s cubic-bezier(.2,.6,.3,1) infinite;opacity:0}
+.wave:nth-of-type(2){animation-delay:.7s}.wave:nth-of-type(3){animation-delay:1.4s}
+@keyframes wavep{0%{transform:scale(.15);opacity:.95}100%{transform:scale(1);opacity:0}}
+.firept{fill:#ff3b30;stroke:#fff}
+.exitm rect{fill:#16a34a;stroke:#fff}
+.exitm text{fill:#fff;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:.06em}
+.ax-tl{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ax-tl div{padding:8px 6px 9px;border-radius:16px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.14);text-align:center;min-width:0}
+.ax-tl div.on{background:rgba(255,255,255,.95);color:#1e293b;border-color:#fff}
+.ax-tl i{display:block;font-style:normal;font-size:16px;line-height:1.2}
+.ax-tl small{display:block;font-size:9.5px;font-weight:700;letter-spacing:.02em;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ax-tl b{display:block;font-size:12px;font-weight:800;margin-top:1px}
+.ax-ack{width:100%;height:64px;border-radius:22px;background:#fff;color:#c0180f;font-size:20px;font-weight:850;letter-spacing:.01em;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 12px 34px rgba(0,0,0,.3);position:relative;overflow:hidden;transition:transform .15s var(--spring),background .3s}
+.ax-ack::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,59,48,.12) 50%,transparent 70%);transform:translateX(-100%);animation:sheen 2.2s ease-in-out infinite}
+@keyframes sheen{to{transform:translateX(100%)}}
+.ax-ack:active{transform:scale(.97)}
+.ax-ack.done{background:#22c55e;color:#fff}.ax-ack.done::before{display:none}
+.ax-ack small{font-size:13px;font-weight:700;opacity:.9}
+.ax-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ax-row a,.ax-row button{height:52px;border-radius:18px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.26);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:12px;font-weight:700;text-decoration:none;color:#fff;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.ax-row a:active,.ax-row button:active{transform:scale(.95);background:rgba(255,255,255,.2)}
+.ax-row span{font-size:17px;line-height:1.1}
+.ax-more{font-size:12px;text-align:center;color:rgba(255,235,228,.85)}
+.ax-more button{text-decoration:underline;font-weight:700}
+
+/* compact timeline in sheets / home */
+.tl{display:flex;flex-direction:column;gap:0;margin:12px 0;background:var(--glass-row);border-radius:16px;padding:6px 14px}
+.tl .st{display:flex;align-items:flex-start;gap:12px;padding:9px 0;position:relative}
+.tl .st::before{content:"";position:absolute;left:11px;top:31px;bottom:-9px;width:2px;background:rgba(255,255,255,.14)}
+.tl .st:last-child::before{display:none}
+.tl .st i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;flex:none;background:rgba(255,255,255,.14)}
+.tl .st.fire i{background:var(--fire)}.tl .st.ack i{background:var(--green)}.tl .st.snd i{background:var(--violet)}.tl .st.rst i{background:var(--blue)}.tl .st.rep i{background:var(--att)}.tl .st.clr i{background:#10b981}.tl .st.wait i{background:transparent;border:2px dashed rgba(255,255,255,.3)}
+.tl .st div{flex:1;min-width:0;font-size:13.5px;font-weight:600}
+.tl .st small{display:block;font-size:11.5px;color:var(--wt-m);font-weight:500}
+.tl .st time{font-size:13px;font-weight:800;flex:none}
+.tl .st.wait div,.tl .st.wait time{color:var(--wt-d)}
+
+/* ---- journal: tabs, floor chips, heat map ---- */
+.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:99px;background:rgba(15,17,24,.6);border:1px solid var(--gline);margin-bottom:12px}
+.tabs2 button{height:36px;border-radius:99px;font-size:13px;font-weight:700;color:rgba(255,255,255,.7);transition:all .25s var(--ease)}
+.tabs2 button.on{background:#fff;color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.chips.fl2{margin-bottom:8px}
+.chip .cn{display:inline-block;min-width:17px;height:17px;line-height:17px;border-radius:9px;font-size:10px;margin-left:6px;background:rgba(255,255,255,.18);text-align:center;padding:0 4px}
+.chip.on .cn{background:rgba(255,255,255,.3)}
+.heatwrap{position:relative;height:250px;border-radius:22px;overflow:hidden;background:#141414;border:3px solid #fff;box-shadow:0 4px 15px rgba(0,0,0,.12);margin-bottom:10px}
+.heatwrap img,.heatwrap canvas{position:absolute;left:0;top:0}
+.heatwrap canvas{mix-blend-mode:screen}
+.heatleg{position:absolute;right:10px;top:10px;z-index:3;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;background:rgba(28,30,38,.82);border:1px solid rgba(255,255,255,.18);border-radius:99px;padding:5px 10px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.heatleg i{width:54px;height:6px;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#facc15,#ff701e,#ff1f1f)}
+.hstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.hstats .wcard{padding:10px 11px;border-radius:16px}
+.hstats b{display:block;font-size:20px;font-weight:800;letter-spacing:-.4px}
+.hstats small{font-size:10.5px;color:var(--ink-m);font-weight:600}
+.hrow{display:flex;align-items:center;gap:11px;padding:10px 11px;width:100%;text-align:left;background:var(--glass-row);border:1px solid rgba(255,255,255,.1);border-radius:18px}
+.hrow .rk{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none;background:rgba(255,255,255,.12)}
+.hrow .hb{height:6px;border-radius:3px;background:rgba(255,255,255,.1);margin-top:6px;overflow:hidden}
+.hrow .hb i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#facc15,#ff701e,#ff1f1f);transform-origin:left;animation:hbar .9s var(--spring) both}
+@keyframes hbar{from{transform:scaleX(0)}}
+.hrow .n{font-size:18px;font-weight:800;flex:none;text-align:right}
+.hrow .n small{display:block;font-size:10px;font-weight:600;color:var(--wt-d)}
+.note{font-size:11.5px;color:var(--wt-d);margin:8px 2px 0;line-height:1.45}
+
+/* ---- exits on plans ---- */
+.ex{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:9px;background:#16a34a;border:2px solid #fff;display:grid;place-items:center;box-shadow:0 0 0 4px rgba(34,197,94,.25),0 4px 10px rgba(0,0,0,.4);z-index:2}
+.ex svg{width:15px;height:15px}
+.editbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border-radius:18px;background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.45);font-size:12.5px}
+.editbar span{flex:1 1 180px}
+
+/* ---- settings additions ---- */
+.seg3{display:flex;background:rgba(15,17,24,.65);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:3px;gap:2px}
+.seg3 button{min-width:34px;height:30px;border-radius:99px;font-size:13px;font-weight:700;color:rgba(255,255,255,.6)}
+.seg3 button.on{background:var(--orange);color:#fff;box-shadow:0 2px 8px rgba(255,112,30,.5)}
+.sw{position:relative;width:51px;height:31px;border-radius:99px;background:rgba(255,255,255,.18);transition:background .25s;flex:none}
+.sw::after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .25s var(--spring)}
+.sw.on{background:var(--green)}.sw.on::after{transform:translateX(20px)}
+.alarmbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;border-radius:18px;background:var(--fire);box-shadow:0 8px 26px rgba(255,59,48,.45);font-weight:700;font-size:13.5px;width:100%;text-align:left;animation:blink 1.4s infinite}
 </style>
 </head>
 <body>
@@ -329,6 +495,7 @@ body.alarm main{border-color:rgba(255,120,100,.55);box-shadow:0 0 0 1px rgba(255
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet"><div class="grab"></div><div id="sheetc"></div></div>
 <div class="toast" id="toast"></div>
+<div class="ax" id="ax"></div>
 
 <script>
 'use strict';
@@ -342,7 +509,8 @@ const LV = {
   info:{ic:'ℹ️',name:'Информация',cls:'lv-info'}
 };
 const rank = l=>({fire:5,attention:4,alarm:3,malfunction:2,info:1}[l]||0);
-const S = {code:null, site:null, events:[], status:null, view:'home', plan:null, filter:'all', lastPoll:0, phone:'', seen:0, range:'week', day:null, calM:null, theme:'day'};
+const S = {code:null, site:null, events:[], status:null, view:'home', plan:null, filter:'all', lastPoll:0, phone:'', seen:0, range:'week', day:null, calM:null, theme:'day',
+  name:'', tier:1, siren:'1', evTab:'feed', floorF:'all', hPer:'30', hMode:'false', hPlan:null, ping:null, lastId:null, exitEdit:false};
 const ls = {get:k=>{try{return localStorage.getItem(k)}catch(e){return null}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 
 /* ---------- IndexedDB (shared with service worker) ---------- */
@@ -384,11 +552,13 @@ function greet(){const h=new Date().getHours();return h<5?'Доброй ночи
 async function relayPoll(){
   if(DEMO||!S.code) return;
   try{
-    const r = await fetch(`${CFG.relay}/${topic('e')}/json?poll=1&since=12h`,{cache:'no-store'});
-    const txt = await r.text(); const evs=[]; let st=null;
-    txt.split('\n').forEach(l=>{if(!l.trim())return;try{const m=JSON.parse(l);if(m.event!=='message')return;const o=JSON.parse(m.message);if(o.t==='event')evs.push(o);else if(o.t==='status'&&(!st||o.ts>st.ts))st=o}catch(e){}});
+    const since = S.lastId && Date.now()-S.lastPoll<3*3600e3 ? S.lastId : '12h';
+    const r = await fetch(`${CFG.relay}/${topic('e')}/json?poll=1&since=${encodeURIComponent(since)}`,{cache:'no-store'});
+    const txt = await r.text(); const evs=[]; let st=null, pg=null;
+    txt.split('\n').forEach(l=>{if(!l.trim())return;try{const m=JSON.parse(l);if(m.event!=='message')return;S.lastId=m.id;const o=JSON.parse(m.message);if(o.t==='event')evs.push(o);else if(o.t==='status'&&(!st||o.ts>st.ts))st=o;else if(o.t==='ping'&&(!pg||o.ts>pg.ts))pg=o}catch(e){}});
     if(evs.length){await dbPut(evs)}
-    if(st){S.status=st;kvSet('status',st)}
+    if(st&&(!S.status||st.ts>=S.status.ts)){S.status=st;kvSet('status',st)}
+    if(pg&&(!S.ping||pg.ts>S.ping.ts)){S.ping=pg;kvSet('ping',pg)}
     S.lastPoll=Date.now();
     await loadEvents(); render();
   }catch(e){console.warn('relay',e)}
@@ -404,23 +574,18 @@ async function loadEvents(){
 }
 
 /* ---------- derived state ---------- */
+// Last contact = newest status or ping from the agent (ping every ~60 s since agent 1.1).
 function online(){
-  const st=S.status; if(DEMO) return {ok:true,txt:'Ресепшен на связи · только что',short:'только что'};
-  if(!st) return {ok:false,txt:'Ожидание связи с ресепшеном',short:'ожидание'};
-  const lim=((st.hbMin||15)*1.6+3)*60e3, age=Date.now()-st.ts;
-  if(age>lim) return {ok:false,txt:'Нет связи с ресепшеном · '+ago(st.ts),short:ago(st.ts)};
-  if(!st.firesec) return {ok:false,txt:'FireSec не запущен на ресепшене',short:'FireSec выкл.'};
-  return {ok:true,txt:'Ресепшен на связи · '+ago(st.ts),short:ago(st.ts)};
+  const st=S.status, pg=S.ping, last=Math.max(st?st.ts:0,pg?pg.ts:0);
+  if(DEMO) return {ok:true,txt:'Ресепшен на связи',short:agoSec(last||Date.now()),last:last||Date.now()};
+  if(!last) return {ok:false,txt:'Ожидание связи с ресепшеном',short:'ожидание',last:0};
+  const lim=pg?((pg.sec||60)*3+30)*1000:(((st&&st.hbMin)||15)*1.6+3)*60e3, age=Date.now()-last;
+  if(age>lim) return {ok:false,txt:'Нет связи с ресепшеном с '+hms(last),short:ago(last),last};
+  const fs=pg&&(!st||pg.ts>=st.ts)?pg.fs:(st?st.firesec:true);
+  if(fs===false) return {ok:false,txt:'FireSec не запущен на ресепшене',short:'FireSec выкл.',last};
+  return {ok:true,txt:'Ресепшен на связи',short:agoSec(last),last};
 }
-function activeAlarms(){
-  // Prefer the agent's status snapshot; add newer events not yet in it.
-  const act=new Map();
-  if(S.status&&S.status.active) S.status.active.forEach(e=>{if(rank(e.level)>=3)act.set(keyOf(e),e)});
-  const since=S.status?S.status.ts:0;
-  S.events.slice().reverse().forEach(e=>{ if(e.ts<since||e.test) return; const k=keyOf(e);
-    if(e.cleared) act.delete(k); else if(rank(e.level)>=3) act.set(k,e)});
-  return [...act.values()].sort((a,b)=>rank(b.level)-rank(a.level)||b.ts-a.ts);
-}
+function activeAlarms(){ return activeStates().filter(e=>rank(e.level)>=3) }
 const keyOf = e=>(e.guid||('z'+e.zoneNo))+'|'+(e.stateCode||e.state);
 function devPos(e){
   const s=S.site; if(!s||!e) return null;
@@ -485,56 +650,68 @@ function bellBtn(){const nb=newCount();return `<button class="gbtn" onclick="go(
 const newCount=()=>S.events.filter(e=>e.ts>S.seen&&rank(e.level)>=2&&!e.test).length;
 
 V.home = ()=>{
-  const al=activeAlarms(), on=online(), s=S.site;
+  const al=activeAlarms(), on=online(), s=S.site, mals=activeMal();
   document.body.classList.toggle('alarm', al.some(a=>a.level==='fire'));
   document.body.classList.toggle('attn', !al.some(a=>a.level==='fire') && al.length>0);
-  const sub=`<i class="dot ${on.ok?'ok':'bad'}"></i>${on.ok?'На связи · '+esc(on.short):esc(on.txt)}`;
+  const sub=`<i class="dot ${on.ok?'ok':'bad'}"></i>${on.ok?'На связи · <span data-ago="'+on.last+'">'+esc(on.short)+'</span>':esc(on.txt)}`;
   if(al.length){
-    const a=al[0], L=LV[a.level]||LV.info, pos=devPos(a);
+    const a=al[0], L=LV[a.level]||LV.info, pos=devPos(a), I=incInfo(a);
     const floor=a.floor||(pos&&pos.plan&&pos.plan.name)||'—';
     return header(`<strong>${a.level==='fire'?'Пожар!':'Внимание!'}</strong> 🚨`,sub,bellBtn())+`
+    ${$('#ax').classList.contains('on')?'':`<button class="alarmbar rv" onclick="axShow()">🚨 <span style="flex:1">Открыть экран тревоги</span><b class="mono" data-since="${a.ts}">${mmss((Date.now()-a.ts)/1000)}</b></button>`}
     <div class="alarm-card rv">
       <div class="siren"><span></span><span></span><span></span><i>${L.ic}</i></div>
       <div class="kind">${esc((a.state||L.name).toUpperCase())}</div>
       <div class="floor">${esc(floor)}</div>
       <div class="place">${esc(a.place||a.zone||'')}</div>
       <div class="dev">${esc(a.device||'')}${a.deviceName?' · '+esc(a.deviceName):''}</div>
-      <div class="when">${hm(a.ts)} · ${ago(a.ts)}</div>
+      <div class="when">Сработал в <b class="mono">${hms(a.ts)}</b> · прошло <b class="mono" data-since="${a.ts}">${mmss((Date.now()-a.ts)/1000)}</b></div>
       <div class="btns">
-        ${pos?`<button class="btn wh" onclick="openPlanFor('${esc(a.id)}')">🗺 На плане</button>`:''}
+        ${I.ack?`<button class="btn wh wide" style="color:#15803d" onclick="axShow()">✓ Принято в <span class="mono">${hms(I.ack.ts)}</span></button>`:`<button class="btn wh wide" onclick="ackAlarm()">✓ Принял</button>`}
+        ${pos?`<button class="btn gh" onclick="openPlanFor('${esc(a.id)}')">🗺 Путь к выходу</button>`:''}
         ${S.phone?`<a class="btn or ${pos?'':'wide'}" href="tel:${esc(S.phone)}">📞 Ресепшен</a>`:`<button class="btn gh ${pos?'':'wide'}" onclick="go('settings')">📞 Телефон</button>`}
       </div>
       ${pos&&pos.plan&&pos.plan.img?`<div class="mini" id="mini" data-ev="${esc(a.id)}"><img src="${pos.plan.img}"><div class="pin"></div><div class="pcap">${esc(pos.plan.name)}</div></div>`:''}
-      ${DEMO?`<div class="btns"><button class="btn gh wide" onclick="demoClear()">Демо: снять тревогу</button></div>`:''}
+      <div style="text-align:left">${tlHTML(a)}</div>
+      ${DEMO?`<div class="btns"><button class="btn gh wide" onclick="demoClear()">Демо: ресепшен сбросил тревогу</button></div>`:''}
     </div>
-    ${al.length>1?`<div class="sect rv"><span class="st">Ещё активно: ${al.length-1}</span></div><div class="list">${al.slice(1).map(evRow).join('')}</div>`:''}`;
+    ${al.length>1?`<div class="sect rv"><span class="st">Ещё активно: ${al.length-1}</span></div><div class="list">${al.slice(1).map(evRow).join('')}</div>`:''}
+    ${mals.length?malBox(mals):''}`;
   }
-  const st=S.status||{}, mal=(st.active||[]).filter(e=>e.level==='malfunction').length;
+  const st=S.status||{};
   const total=st.devices||(s?s.devices.length:0), dis=st.disabled!=null?st.disabled:null;
   const work=total?((total-(dis||0))/total):1;
   const ch=chartSVG();
   const plans=s.plans.slice().sort((a,b)=>planOrder(a)-planOrder(b));
   const hot=new Set(al.map(a=>{const p=devPos(a);return p&&p.plan&&p.plan.id}));
-  const malDays=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=dayKey(d);malDays.push(S.events.filter(e=>e.level==='malfunction'&&dayKey(e.ts)===k).length)}
-  const last=S.events.filter(e=>!e.test).slice(0,4);
+  const malDays=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=dayKey(d);malDays.push(S.events.filter(e=>e.level==='malfunction'&&!e.cleared&&dayKey(e.ts)===k).length)}
+  const last=S.events.filter(e=>!e.test&&e.kind!=='false').slice(0,4);
+  const state=!on.ok?'off':mals.length?'warn':'ok', now=Date.now();
+  const title={ok:'Всё спокойно',warn:'Пожара нет',off:on.txt.indexOf('FireSec')>=0?'FireSec не запущен':'Нет связи'}[state];
+  const subT={ok:'Пожарная сигнализация в норме',warn:`Неисправности: ${mals.length} · тихо, без сирены`,off:'Проверьте компьютер ресепшена'}[state];
   return header(`${greet()}, <strong>ресепшен</strong> 👋`,sub,themeSw(true)+bellBtn())+`
+   <div class="wcard hero live rv">
+     <div class="ht">
+       <div><div class="lv-t"><i class="pulse ${{ok:'',warn:'y',off:'r'}[state]}"></i><h3>${title}</h3></div><small style="display:block;font-size:12px;color:var(--ink-m);margin-top:3px">${esc(subT)}</small></div>
+       <div><div class="clockbig mono" data-clock>${hms(now)}</div><div class="datesm" data-date>${dateTxt(now)}</div></div>
+       <div class="link ${on.ok?'':'bad'}"><span style="flex:none">${on.ok?'📡':'⚠️'}</span><span>Связь с агентом: <b class="mono">${on.last?hms(on.last):'—'}</b><br><span data-ago="${on.last}">${on.last?agoSec(on.last):'ещё не было'}</span></span></div>
+     </div>
+     <div class="ring ${state==='off'?'off':state==='warn'?'warn':''}" style="align-self:center"><div class="core" style="color:${{ok:'#22c55e',warn:'#ca8a04',off:'#94a3b8'}[state]}">${IC.shield}</div></div>
+   </div>
+   ${mals.length?malBox(mals):''}
    <div class="metrics">
      <button class="wcard met tap rv" onclick="go('plans')"><div class="mt">Датчики<span class="badge orange">${IC.sensor}</span></div><div class="mg">${barsSVG(plans.map(p=>s.PC[p.id]||0),'#ff701e')}</div><div class="mb"><span class="mv orange">${total||'—'}</span><span class="mu">шт · ${s.plans.length} планов</span></div></button>
-     <button class="wcard met tap rv" onclick="go('settings')"><div class="mt">Связь<span class="badge pink">${IC.heart}</span></div><div class="mg">${ecgSVG(on.ok)}</div><div class="mb"><span class="mv ${on.ok?'pink':'grey'}">${on.ok?'онлайн':'нет'}</span><span class="mu">${esc(on.short)}</span></div></button>
+     <button class="wcard met tap rv" onclick="go('settings')"><div class="mt">Связь<span class="badge pink">${IC.heart}</span></div><div class="mg">${ecgSVG(on.ok)}</div><div class="mb"><span class="mv ${on.ok?'pink':'grey'}">${on.ok?'онлайн':'нет'}</span><span class="mu mono">${on.last?hms(on.last):'—'}</span></div></button>
      <button class="wcard met tap rv" onclick="go('plans')"><div class="mt">В работе<span class="badge green">${IC.shield}</span></div><div class="mg">${gaugeSVG(work)}</div><div class="mb"><span class="mv green">${dis==null?'—':Math.round(work*100)+'%'}</span><span class="mu">${dis==null?'нет данных':'откл. '+dis}</span></div></button>
-     <button class="wcard met tap rv" onclick="S.filter='malfunction';go('events')"><div class="mt">Неисправности<span class="badge blue">${IC.wrench}</span></div><div class="mg">${barsSVG(malDays,'#3b82f6')}</div><div class="mb"><span class="mv blue">${st.active?mal:'—'}</span><span class="mu">активных</span></div></button>
+     <button class="wcard met tap rv" onclick="S.filter='malfunction';S.evTab='feed';go('events')"><div class="mt">Неисправности<span class="badge yellow">${IC.wrench}</span></div><div class="mg">${barsSVG(malDays,'#eab308')}</div><div class="mb"><span class="mv yellow">${st.active||DEMO?mals.length:'—'}</span><span class="mu">активных · тихо</span></div></button>
    </div>
-   <div class="wcard hero rv">
-     <div class="ht"><h3>Всё спокойно<small>Пожарная сигнализация в норме</small></h3>
-       <div class="hs"><div><b>${s.zones.length} <span>зон</span></b><small>FireSec</small></div><div><b>${ch.tot} <span>соб.</span></b><small>${S.range==='day'?'за сутки':'за неделю'}</small></div></div></div>
-     <div class="ring"><div class="core" style="color:#22c55e">${IC.shield}</div></div>
-   </div>
-   <div class="wcard chart rv"><div class="ch-h"><div><b>Активность</b><small>события FireSec</small></div><div class="seg"><button class="${S.range==='day'?'on':''}" onclick="setRange('day')">Сутки</button><button class="${S.range==='week'?'on':''}" onclick="setRange('week')">Неделя</button></div></div>${ch.svg}</div>
+   <div class="wcard chart rv"><div class="ch-h"><div><b>Активность</b><small>события FireSec · ${ch.tot} ${S.range==='day'?'за сутки':'за неделю'}</small></div><div class="seg"><button class="${S.range==='day'?'on':''}" onclick="setRange('day')">Сутки</button><button class="${S.range==='week'?'on':''}" onclick="setRange('week')">Неделя</button></div></div>${ch.svg}</div>
    <div class="sect rv"><span class="st">Этажи</span><a onclick="go('plans')">все →</a></div>
    <div class="floors rv">${plans.map((p,i)=>floorCard(p,hot.has(p.id),S.plan?S.plan===p.id:i===2)).join('')}</div>
    <div class="sect rv"><span class="st">Последние события</span><a onclick="go('events')">все →</a></div>
    <div class="list">${last.length?last.map(evRow).join(''):'<div class="empty rv">Событий пока нет. Здесь появится всё, что увидит FireSec.</div>'}</div>`;
 };
+function malBox(m){return `<div class="malbox rv"><div class="mh"><span>🔧 Неисправности · ${m.length}</span><small>🔕 без сирены</small></div><div class="list">${m.slice(0,4).map(evRow).join('')}</div>${m.length>4?`<div class="sect" style="margin:8px 2px 0"><a onclick="S.filter='malfunction';S.evTab='feed';go('events')">ещё ${m.length-4} →</a></div>`:''}</div>`}
 function planOrder(p){const m=/^(\d+)/.exec(p.name);if(/лобби/i.test(p.name))return 0.5;if(/^ground/i.test(p.name))return 0;return m?+m[1]:50}
 function floorCard(p,hot,on){
   const n=S.site.PC[p.id]||0, cls=hot?'r':(on?'o':'w');
@@ -544,14 +721,24 @@ function setRange(r){S.range=r;ls.set('range',r);render(true)}
 function themeSw(small){return `<div class="themesw"${small?' style="padding:3px"':''}><button class="${S.theme==='day'?'on':''}" onclick="setTheme('day')" aria-label="День">${IC.sun}</button><button class="${S.theme==='night'?'on':''}" onclick="setTheme('night')" aria-label="Ночь">${IC.moon}</button></div>`}
 function setTheme(t){S.theme=t;ls.set('theme',t);document.body.classList.toggle('night',t==='night');render();toast(t==='night'?'Ночной режим':'Дневной режим')}
 
+const KIND={ack:{ic:'✅',cls:'lv-ack',name:'Принято'},sound:{ic:'🔇',cls:'lv-sound',name:'Звук'},reset:{ic:'↺',cls:'lv-reset',name:'Сброс'},false:{ic:'🛈',cls:'lv-info',name:'Ложная'}};
 function evRow(e){
-  const L=e.cleared?{ic:'✅',cls:'lv-cleared',name:'Снято'}:(LV[e.level]||LV.info);
+  let L=e.kind?KIND[e.kind]||LV.info:e.cleared?{ic:'✅',cls:'lv-cleared',name:e.level==='malfunction'?'Устранено':'Снято'}:(LV[e.level]||LV.info);
+  if(e.kind==='sound'&&e.cleared) L={ic:'🔊',cls:'lv-sound',name:'Звук'};
   const where=[e.floor,e.place].filter(Boolean).join(', ')||e.zone||'';
-  const t1=e.test?esc(e.title):(e.cleared?'Снято: '+esc(e.state):esc(e.state||L.name))+(where?' · '+esc(where):'');
-  const t2=e.test?esc(e.body):esc([e.device,e.deviceName].filter(Boolean).join(' · '));
+  let t1, t2, t3='';
+  if(e.test){t1=esc(e.title);t2=esc(e.body)}
+  else if(e.kind==='ack'){t1='Принял: '+esc(e.by||'');t2='Тревогу приняли в приложении'}
+  else if(e.kind==='sound'){t1=e.cleared?'Звук снова включён':'Звук отключён'+(/отключ/i.test(e.state||'')?'':' · '+esc(e.state||''));t2=esc(where||'на ресепшене')}
+  else if(e.kind==='reset'){t1='Сброс на ресепшене'+(e.state?' · '+esc(e.state):'');t2=esc(where)}
+  else if(e.kind==='false'){t1='Отмечено как ложное';t2=esc(e.by||'')}
+  else {t1=(e.cleared?(e.level==='malfunction'?'Устранено: ':'Снято: ')+esc(e.state):esc(e.state||L.name))+(where?' · '+esc(where):'');
+    t2=esc([e.device,e.deviceName].filter(Boolean).join(' · '))+(e.cleared&&e.dur?' · длилось '+durTxt(e.dur):'');
+    if(isAlarmEv(e)){const I=incInfo(e);t3=[e.repeat||I.rep?'🔁 повтор ×'+(I.rep||e.repeat):'',I.ack?'✓ '+esc(I.ack.by)+' '+hms(I.ack.ts):'',I.snd?'🔇 '+hms(I.snd.ts):'',I.clr?'↺ сброс '+hms(I.clr.ts):'',I.fls?'ложная':''].filter(Boolean).join(' · ')}}
   const tg=e.test?'Проверка':L.name;
-  return `<button class="ev ${L.cls} rv" onclick="openEvent('${esc(e.id)}')"><div class="ic">${L.ic}</div><div class="tx"><span class="tag">${esc(tg)}</span><div class="t1">${t1}</div><div class="t2">${t2||'&nbsp;'}</div></div><div class="rt"><span class="more3">${IC.dots}</span><span class="tm">${hm(e.ts).slice(0,5)}</span></div></button>`;
+  return `<button class="ev ${L.cls} rv" onclick="openEvent('${esc(e.id)}')"><div class="ic">${L.ic}</div><div class="tx"><span class="tag">${esc(tg)}</span><div class="t1">${t1}</div><div class="t2">${t2||'&nbsp;'}</div>${t3?`<div class="t3">${t3}</div>`:''}</div><div class="rt"><span class="more3">${IC.dots}</span><span class="tm mono">${hms(e.ts)}</span></div></button>`;
 }
+function evPlan(e){const p=devPos(e);if(p&&p.plan)return p.plan.id;const f=e.floor&&S.site.plans.find(x=>x.name===e.floor||x.name.toLowerCase()===String(e.floor).toLowerCase());return f?f.id:'none'}
 function calendar(){
   const now=new Date(); if(!S.calM) S.calM=new Date(now.getFullYear(),now.getMonth(),1);
   const m=S.calM, y=m.getFullYear(), mo=m.getMonth(), first=(new Date(y,mo,1).getDay()+6)%7, dim=new Date(y,mo+1,0).getDate();
@@ -567,16 +754,24 @@ function calMove(n){S.calM=new Date(S.calM.getFullYear(),S.calM.getMonth()+n,1);
 function pickDay(k){S.day=S.day===k?null:k;render()}
 V.events = ()=>{
   document.body.classList.remove('alarm','attn');
-  const F={all:'Все',fire:'Пожар и тревоги',malfunction:'Неисправности',info:'Прочее'};
-  let ev=S.events;
-  if(S.filter==='fire') ev=ev.filter(e=>rank(e.level)>=3);
+  const tabs=`<div class="tabs2 rv"><button class="${S.evTab!=='heat'?'on':''}" onclick="haptic();S.evTab='feed';render(true)">Лента событий</button><button class="${S.evTab==='heat'?'on':''}" onclick="haptic();S.evTab='heat';render(true)">🔥 Тепловая карта</button></div>`;
+  if(S.evTab==='heat') return header('<strong>Журнал</strong>','Какие датчики чаще всего срабатывают',bellBtn())+tabs+heatView();
+  const F={all:'Все',fire:'Тревоги',malfunction:'Неисправности',act:'Действия',info:'Прочее'};
+  let ev=S.events.filter(e=>e.kind!=='false');
+  const base=ev;
+  if(S.filter==='fire') ev=ev.filter(e=>rank(e.level)>=3&&!e.kind);
   else if(S.filter==='malfunction') ev=ev.filter(e=>e.level==='malfunction');
-  else if(S.filter==='info') ev=ev.filter(e=>rank(e.level)<=1);
+  else if(S.filter==='act') ev=ev.filter(e=>e.kind);
+  else if(S.filter==='info') ev=ev.filter(e=>rank(e.level)<=1&&!e.kind);
+  const cnt={}; ev.forEach(e=>{const k=evPlan(e);cnt[k]=(cnt[k]||0)+1});
+  if(S.floorF!=='all') ev=ev.filter(e=>evPlan(e)===S.floorF);
   if(S.day) ev=ev.filter(e=>dayKey(e.ts)===S.day);
-  let html=header('<strong>События</strong>','Всё, что передал агент с ресепшена',bellBtn())+calendar()+
-   `<div class="chips rv" style="margin-top:12px">${Object.entries(F).map(([k,v])=>`<button class="chip ${S.filter===k?'on':''}" onclick="S.filter='${k}';render()">${v}</button>`).join('')}</div>`;
+  const plans=S.site.plans.slice().sort((a,b)=>planOrder(a)-planOrder(b));
+  let html=header('<strong>Журнал</strong>','Всё, что передал агент · точное время',bellBtn())+tabs+calendar()+
+   `<div class="chips rv" style="margin-top:12px">${Object.entries(F).map(([k,v])=>`<button class="chip ${S.filter===k?'on':''}" onclick="S.filter='${k}';render()">${v}</button>`).join('')}</div>
+    <div class="chips fl2 rv"><button class="chip ${S.floorF==='all'?'on':''}" onclick="S.floorF='all';render()">Все этажи</button>${plans.map(p=>`<button class="chip ${S.floorF===p.id?'on':''}" onclick="S.floorF='${p.id}';render()">${esc(p.name)}${cnt[p.id]?`<span class="cn">${cnt[p.id]}</span>`:''}</button>`).join('')}${cnt.none?`<button class="chip ${S.floorF==='none'?'on':''}" onclick="S.floorF='none';render()">Без плана<span class="cn">${cnt.none}</span></button>`:''}</div>`;
   if(S.day) html+=`<div class="sect"><span class="st">${esc(dayLabel(ev[0]?ev[0].ts:dayTs(S.day)))}</span><button onclick="pickDay('${S.day}')">сбросить ✕</button></div>`;
-  if(!ev.length) return html+'<div class="empty rv">Нет событий</div>';
+  if(!ev.length) return html+'<div class="empty rv">Нет событий'+(S.floorF!=='all'?' на этом этаже':'')+'</div>';
   let day='', open=false;
   ev.slice(0,300).forEach(e=>{const d=dayLabel(e.ts);if(d!==day){if(open)html+='</div>';day=d;if(!S.day)html+=`<div class="sect"><span class="st">${d}</span></div>`;html+='<div class="list">';open=true}html+=evRow(e)});
   return html+(open?'</div>':'');
@@ -591,8 +786,9 @@ V.plans = ()=>{
   const cur=s.P[S.plan];
   return header('<strong>Этажи</strong> и планы',`${s.devices.length} датчиков на ${s.plans.length} планах`,bellBtn())+`
    <div class="chips rv" id="pchips">${plans.map(p=>`<button class="chip ${S.plan===p.id?'on':''}" onclick="selPlan('${p.id}')">${esc(p.name)}${hot.has(p.id)?'<span class="bd"></span>':''}</button>`).join('')}</div>
-   <div class="planwrap rv" id="pw"><div class="zoombtns"><button onclick="zoomBy(1.4)">+</button><button onclick="zoomBy(1/1.4)">−</button><button onclick="fitPlan()" style="font-size:14px">⤢</button></div><div class="pcap">${esc(cur?cur.name:'')} · ${s.PC[S.plan]||0} датч.</div><div class="stage" id="stage"></div></div>
-   <div class="legend rv"><span><i style="background:var(--orange)"></i>норма</span><span><i style="background:var(--fire)"></i>пожар</span><span><i style="background:var(--amber)"></i>внимание</span><span><i style="background:var(--blue)"></i>неисправность</span><span><i style="background:#9a958c"></i>отключён</span></div>`;
+   <div class="planwrap rv" id="pw"><div class="zoombtns"><button onclick="zoomBy(1.4)">+</button><button onclick="zoomBy(1/1.4)">−</button><button onclick="fitPlan()" style="font-size:14px">⤢</button><button onclick="exitEditToggle()" aria-label="Выходы" style="font-size:15px;${S.exitEdit?'background:#16a34a':''}">🚪</button></div><div class="pcap">${esc(cur?cur.name:'')} · ${s.PC[S.plan]||0} датч.</div><div class="stage" id="stage"></div></div>
+   ${S.exitEdit?`<div class="editbar rv"><span>Нажмите на план, чтобы поставить выход. Нажмите на зелёный значок, чтобы убрать.</span><button class="btn sm gh" onclick="copyExits()">Скопировать</button><button class="btn sm gh" onclick="resetExits()">Сбросить</button><button class="btn sm or" onclick="exitEditToggle()">Готово</button></div>`:''}
+   <div class="legend rv"><span><i style="background:var(--orange)"></i>норма</span><span><i style="background:var(--fire)"></i>пожар</span><span><i style="background:var(--att)"></i>внимание</span><span><i style="background:var(--yellow)"></i>неисправность</span><span><i style="background:#9a958c"></i>отключён</span><span><i style="background:#16a34a;border-radius:3px"></i>выход</span><span><i style="background:var(--route)"></i>путь к выходу</span></div>`;
 };
 V.settings = ()=>{
   document.body.classList.remove('alarm','attn');
@@ -607,10 +803,20 @@ V.settings = ()=>{
      <div class="row"><div class="l">Оформление<small>${S.theme==='night'?'Ночной режим':'Дневной режим'}</small></div>${themeSw()}</div>
      <div class="row"><div class="l">Телефон ресепшена<small>для кнопки «Позвонить»</small></div><input id="phone" inputmode="tel" placeholder="+996 …" value="${esc(S.phone)}" onchange="savePhone(this.value)"></div>
    </div>
+   <div class="sect rv"><span class="st">Когда тревога</span></div>
+   <div class="gpanel rows rv">
+     <div class="row"><div class="l">Ваше имя<small>его увидят все, когда вы нажмёте «Принял»</small></div><input placeholder="Например, Эрик" value="${esc(S.name)}" onchange="saveName(this.value)"></div>
+     <div class="row"><div class="l">Очередь оповещения<small>${S.tier===1?'1 — получаю тревогу сразу':'Получаю, если за '+durTxt(escSec())+' никто не принял'+(S.tier===3?' (после очереди 2)':'')}</small></div><div class="seg3">${[1,2,3].map(t=>`<button class="${S.tier===t?'on':''}" onclick="setTier(${t})">${t}</button>`).join('')}</div></div>
+     <div class="row"><div class="l">Сирена и вибрация в приложении<small>свой звук сирены, пока открыт экран тревоги</small></div><button class="sw ${S.siren==='0'?'':'on'}" onclick="toggleSiren()" aria-label="Сирена"></button></div>
+     <div class="row"><div class="l">Проверить сирену<small>звучит 3 секунды</small></div><button class="btn sm gh" onclick="sirenTest()">▶︎ Звук</button></div>
+   </div>
+   <p class="note rv">Если тревогу никто не принял за ${durTxt(escSec())}, агент отправляет её повторно и следующей очереди. Время можно изменить в config.json агента (escalation.afterSec).${S.status&&S.status.phones?'<br>Подключено телефонов: '+S.status.phones.map(x=>esc(x.name)+' ('+x.tier+')').join(', '):''}</p>
    <div class="btns rv"><button class="btn or wide" onclick="testPush()">Проверить уведомление</button>
    <button class="btn gh wide" onclick="relayPoll().then(()=>toast('Обновлено'))">Обновить данные</button></div>
    <div class="sect rv"><span class="st">Как это работает</span></div>
-   <div class="gpanel rows rv"><div class="row"><div class="l" style="font-weight:400;font-size:13.5px;color:var(--wt-m)">Агент на компьютере ресепшена только читает состояние FireSec и сразу отправляет уведомление на этот iPhone через интернет. В пожарной системе ничего не меняется. Если связь с ресепшеном пропадёт больше чем на ${Math.round(((S.status&&S.status.hbMin)||15)*1.6+3)} минут, на главном экране появится красный индикатор.</div></div></div>
+   <div class="gpanel rows rv"><div class="row"><div class="l" style="font-weight:400;font-size:13.5px;color:var(--wt-m)">Агент на компьютере ресепшена только читает состояние FireSec и сразу отправляет уведомление на этот iPhone через интернет. В пожарной системе ничего не меняется. Агент выходит на связь ${S.ping?'каждую минуту':'каждые '+((S.status&&S.status.hbMin)||15)+' минут'}: на главном экране видно точное время последней связи. Если связь пропадёт больше чем на ${S.ping?Math.round(((S.ping.sec||60)*3+30)/60):Math.round(((S.status&&S.status.hbMin)||15)*1.6+3)} минут, индикатор станет красным.</div></div></div>
+   <div class="sect rv"><span class="st">Экран блокировки iPhone</span></div>
+   <div class="gpanel rows rv"><div class="row"><div class="l" style="font-weight:400;font-size:13.5px;color:var(--wt-m)">Настоящий виджет на экран блокировки Apple разрешает только приложениям из App Store. Поэтому здесь сделано так: каждое уведомление заканчивается статусом здания («Здание: всё спокойно» или «🔥 1 🔧 2»), а на иконке Fire Monitor стоит число активных тревог и неисправностей. Звук push-уведомления — стандартный звук iPhone; своя сирена и вибрация звучат, когда открыт экран тревоги.</div></div></div>
    <div class="btns rv"><button class="btn gh wide" style="color:#ffb4a8" onclick="unpair()">Отключить этот телефон</button></div>`;
 };
 
@@ -627,13 +833,16 @@ function drawPlan(focus){
     const lv=states[d.g]; const c=lv==='fire'?'fire':(lv==='attention'||lv==='alarm')?'att':lv==='malfunction'?'mal':'';
     dots+=`<i class="d ${c} ${focus&&focus.g===d.g?'sel':''}" style="left:${q[1]*W}px;top:${q[2]*H}px" data-g="${d.g}"></i>`}));
   st.style.width=W+'px'; st.style.height=H+'px';
-  st.innerHTML=(p.img?`<img src="${p.img}" width="${W}" height="${H}">`:`<div style="width:${W}px;height:${H}px;background:#f1f5f9"></div>`)+dots;
+  const exits=getExits(p.id).map((e,i)=>`<i class="ex" style="left:${e[0]*W}px;top:${e[1]*H}px" data-ex="${i}"><svg viewBox="0 0 24 24" fill="#fff"><circle cx="13.5" cy="3.5" r="2"/><path d="M10.5 7.5l-3 1.5-1 4h2l.7-2.6 1.3-.6-1 5.2-3.5 4.5 1.6 1.2 3.9-4.8.8-2 2.2 2.3V22h2v-6.4l-2.6-2.8.6-3 1.2 1.7h4v-2h-3l-2.2-3a2 2 0 00-2.5-.6z"/></svg></i>`).join('');
+  st.innerHTML=(p.img?`<img src="${p.img}" width="${W}" height="${H}">`:`<div style="width:${W}px;height:${H}px;background:#f1f5f9"></div>`)+dots+exits;
   fitPlan();
+  const fa=al.find(a=>{const q=devPos(a);return q&&q.plan&&q.plan.id===p.id});
+  if(fa&&!S.exitEdit){const q=devPos(fa);routeFor(p,q.x,q.y).then(R=>{if(!document.body.contains(st)||S.plan!==p.id)return;const k=.9/PZ.s;st.insertAdjacentHTML('beforeend',routeSVG(W,H,q.x,q.y,R,k,{anim:true,delay:.1}))})}
   if(focus){const r=pw.getBoundingClientRect();PZ.s=PZ.s*2.2;PZ.x=r.width/2-focus.x*W*PZ.s;PZ.y=r.height/2-focus.y*H*PZ.s;applyPZ()}
   bindGestures(pw);
 }
 function fitPlan(){const p=S.site.P[S.plan],pw=$('#pw');if(!pw)return;const r=pw.getBoundingClientRect();const W=p.w||1000,H=p.h||800;PZ.s=Math.min(r.width/W,r.height/H);PZ.x=(r.width-W*PZ.s)/2;PZ.y=(r.height-H*PZ.s)/2;applyPZ()}
-function applyPZ(){const st=$('#stage');if(st)st.style.transform=`translate(${PZ.x}px,${PZ.y}px) scale(${PZ.s})`;document.querySelectorAll('.d').forEach(d=>d.style.transform=`scale(${Math.max(.6,1/PZ.s*.9)})`)}
+function applyPZ(){const st=$('#stage');if(st)st.style.transform=`translate(${PZ.x}px,${PZ.y}px) scale(${PZ.s})`;document.querySelectorAll('.d,.ex').forEach(d=>d.style.transform=`scale(${Math.max(.6,1/PZ.s*.9)})`)}
 function zoomBy(f,cx,cy){const r=$('#pw').getBoundingClientRect();cx=cx==null?r.width/2:cx;cy=cy==null?r.height/2:cy;const ns=Math.min(8,Math.max(.15,PZ.s*f));f=ns/PZ.s;PZ.x=cx-(cx-PZ.x)*f;PZ.y=cy-(cy-PZ.y)*f;PZ.s=ns;applyPZ()}
 function bindGestures(el){
   if(el._b) return; el._b=1; const pts=new Map(); let last=null;
@@ -643,6 +852,7 @@ function bindGestures(el){
     if(pts.size===1){PZ.x+=e.clientX-prev.x;PZ.y+=e.clientY-prev.y;applyPZ()}
     else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;if(last){zoomBy(d/last.d,cx,cy);PZ.x+=cx-last.cx;PZ.y+=cy-last.cy;applyPZ()}last={d,cx,cy}}});
   const up=e=>{pts.delete(e.pointerId);last=null;
+    if(down&&e.type==='pointerup'&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<8&&S.exitEdit){exitTap(e);down=null;return}
     if(down&&e.type==='pointerup'&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<8){ // tap: find nearest device dot
       let best=null,bd=30;document.querySelectorAll('#stage .d').forEach(d=>{const r=d.getBoundingClientRect();const dd=Math.hypot(r.left+r.width/2-e.clientX,r.top+r.height/2-e.clientY);if(dd<bd){bd=dd;best=d}});
       if(best)devInfo(best.dataset.g)}
@@ -651,16 +861,18 @@ function bindGestures(el){
   el.addEventListener('wheel',e=>{e.preventDefault();const r=el.getBoundingClientRect();zoomBy(e.deltaY<0?1.15:1/1.15,e.clientX-r.left,e.clientY-r.top)},{passive:false});
 }
 function selPlan(id,nav){S.plan=id;if(nav)go('plans');else render(true)}
-function openPlanFor(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);const p=e&&devPos(e);if(!p)return;S.plan=p.plan.id;closeSheet();go('plans',{g:e.guid,x:p.x,y:p.y})}
+function openPlanFor(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);const p=e&&devPos(e);if(!p)return;S.plan=p.plan.id;S.exitEdit=false;closeSheet();if($('#ax').classList.contains('on')){activeStates().forEach(a=>S.axHide[a.id]=1);sirenStop();renderAX()}go('plans',{g:e.guid,x:p.x,y:p.y})}
 function devInfo(g){const d=S.site.D[g];if(!d)return;const z=d.z.map(n=>S.site.Z[n]).filter(Boolean)[0];
   const evs=S.events.filter(e=>e.guid===g).slice(0,5);
   sheet(`<div style="display:flex;gap:12px;align-items:center"><span class="badge orange" style="width:44px;height:44px">${IC.sensor}</span><div style="min-width:0"><h3>${esc(d.t)}</h3><div class="sub">${esc(d.n)}</div></div></div>
    <div class="kv"><span>Этаж</span><b>${esc((z&&z.floor)||S.site.P[S.plan].name)}</b><span>Помещение</span><b>${esc(z?z.place:'—')}</b><span>Зона FireSec</span><b>${z?z.no+' · '+esc(z.name):'—'}</b></div>
    ${evs.length?'<div class="sect"><span class="st">События датчика</span></div><div class="list">'+evs.map(evRow).join('')+'</div>':''}`)}
-function openEvent(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);if(!e)return;const L=e.cleared?{ic:'✅',name:'Снято'}:(LV[e.level]||LV.info);const pos=devPos(e);
-  sheet(`<div style="display:flex;gap:12px;align-items:center"><div style="font-size:30px;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.1);display:grid;place-items:center;flex:none">${L.ic}</div><div style="min-width:0"><h3>${esc(e.test?e.title:(e.cleared?'Снято: ':'')+(e.state||L.name))}</h3><div class="sub">${new Date(e.ts).toLocaleString('ru-RU')}</div></div></div>
+function openEvent(id){const e=S.events.find(x=>x.id===id)||activeAlarms().find(x=>x.id===id);if(!e)return;const L=e.kind?KIND[e.kind]||LV.info:e.cleared?{ic:'✅',name:'Снято'}:(LV[e.level]||LV.info);const pos=devPos(e);
+  sheet(`<div style="display:flex;gap:12px;align-items:center"><div style="font-size:30px;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.1);display:grid;place-items:center;flex:none">${L.ic}</div><div style="min-width:0"><h3>${esc(e.test?e.title:(e.cleared?'Снято: ':'')+(e.state||L.name))}</h3><div class="sub mono">${new Date(e.ts).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})}, ${hms(e.ts)}</div></div></div>
    <div class="kv"><span>Этаж</span><b>${esc(e.floor||(pos&&pos.plan.name)||'—')}</b><span>Помещение</span><b>${esc(e.place||'—')}</b><span>Датчик</span><b>${esc(e.device||'—')}</b><span>Адрес</span><b>${esc(e.deviceName||'—')}</b><span>Зона</span><b>${e.zoneNo?e.zoneNo+' · '+esc(e.zone||''):'—'}</b>${e.test?'<span>Текст</span><b>'+esc(e.body)+'</b>':''}</div>
-   ${pos&&pos.plan?`<button class="btn or" onclick="openPlanFor('${esc(e.id)}')">🗺 Показать на плане · ${esc(pos.plan.name)}</button>`:''}`)}
+   ${isAlarmEv(e)?tlHTML(e):''}
+   ${pos&&pos.plan?`<button class="btn or" onclick="openPlanFor('${esc(e.id)}')">🗺 Показать на плане · ${esc(pos.plan.name)}</button>`:''}
+   ${isAlarmEv(e)&&!incInfo(e).fls?`<button class="btn gh" style="margin-top:10px" onclick="closeSheet();markFalse('${esc(e.id)}')">Отметить как ложное срабатывание</button>`:''}`)}
 function sheet(h){$('#sheetc').innerHTML=h;$('#sheet').scrollTop=0;$('#sheet').classList.add('on');$('#scrim').classList.add('on')}
 function closeSheet(){$('#sheet').classList.remove('on');$('#scrim').classList.remove('on')}
 $('#scrim').onclick=closeSheet;
@@ -681,13 +893,16 @@ function render(anim){
   const nb=newCount(); const bd=$('#evbd'); bd.textContent=nb; bd.classList.toggle('hidden',!nb||S.view==='events');
   const sc=$('#main').scrollTop;
   if(S.view==='plans'&&$('#stage')&&!pendingFocus&&render._v==='plans'&&!anim){ // keep zoom while refreshing
-    const x=PZ.x,y=PZ.y,s=PZ.s; $('#main').innerHTML='<div class="view">'+V.plans()+'</div>'; $('#pw')._b=0; drawPlan(); PZ.x=x;PZ.y=y;PZ.s=s;applyPZ(); render._v='plans'; return }
+    const x=PZ.x,y=PZ.y,s=PZ.s; $('#main').innerHTML='<div class="view">'+V.plans()+'</div>'; $('#pw')._b=0; drawPlan(); PZ.x=x;PZ.y=y;PZ.s=s;applyPZ(); render._v='plans'; renderAX(); return }
   const fresh=anim||render._v!==S.view;
   $('#main').innerHTML='<div class="'+(fresh?'view anim':'')+'">'+V[S.view]()+'</div>';
   if(!fresh) $('#main').scrollTop=sc;
   render._v=S.view;
   if(S.view==='plans'){ drawPlan(pendingFocus); pendingFocus=null; const c=document.querySelector('#pchips .chip.on'); c&&c.scrollIntoView({inline:'center',block:'nearest'}) }
   if(S.view==='home') drawMini();
+  if(S.view==='events'&&S.evTab==='heat') drawHeat();
+  renderAX();
+  setBadge(activeStates().length);
 }
 
 /* ---------- dock: tap + magnification while dragging a finger across ---------- */
@@ -747,7 +962,7 @@ async function enablePush(fromOb){
     const reg=await navigator.serviceWorker.ready;
     let sub=await reg.pushManager.getSubscription();
     if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64(CFG.vapid)});
-    await relaySend({type:'sub',sub:sub.toJSON(),name:deviceName(),app:location.origin+location.pathname.replace(/[^/]*$/,'')});
+    await relaySend({type:'sub',sub:sub.toJSON(),name:myName(),tier:S.tier,app:location.origin+location.pathname.replace(/[^/]*$/,'')});
     ls.set('subEndpoint',sub.endpoint);
     toast('Готово! Через минуту придёт уведомление «Телефон подключён ✓»');
     fromOb?finishOb():render();
@@ -768,12 +983,15 @@ function urlB64(s){const p='='.repeat((4-s.length%4)%4);const b=atob((s+p).repla
 
 /* ---------- demo ---------- */
 function simulate(){
-  const s=S.site; const d=s.devices.find(x=>x.t==='Дымовой датчик'&&x.z.length&&S.site.Z[x.z[0]]&&/этаж/.test(S.site.Z[x.z[0]].floor||'')&&x.p.length)||s.devices[0];
-  const z=s.Z[d.z[0]]||{};
-  const ev={t:'event',id:'demo-'+Date.now(),ts:Date.now(),level:'fire',state:'Пожар',stateCode:'Fire',floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'};
-  S.events.unshift(ev); S.view='home'; render(true); toast('Демо: срабатывание датчика');
+  const s=S.site; const d=s.devices.find(x=>x.t==='Дымовой датчик'&&x.z.length&&S.site.Z[x.z[0]]&&/3 этаж/.test(S.site.Z[x.z[0]].floor||'')&&x.p.length)||s.devices.find(x=>x.p.length)||s.devices[0];
+  const z=s.Z[d.z[0]]||{}, ts=Date.now();
+  const ev={t:'event',id:'demo-'+ts,ts,rts:ts,tier:1,level:'fire',state:'Пожар',stateCode:'Fire',floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'};
+  S.events.unshift(ev); S.axHide={}; S.view='home'; audioUnlock(); render(true); toast('Демо: срабатывание датчика');
 }
-function demoClear(){const a=activeAlarms();a.forEach(e=>S.events.unshift(Object.assign({},e,{id:e.id+'c',ts:Date.now(),cleared:true})));render(true);toast('Демо: тревога снята')}
+function demoClear(){const ts=Date.now();const a=activeAlarms();
+  S.events.unshift({t:'event',kind:'reset',id:'dr'+ts,ts,level:'info',state:'Сброс пожара',source:'zone'});
+  a.forEach(e=>S.events.unshift(Object.assign({},e,{id:e.id+'c',ts:ts+1,cleared:true,dur:Math.round((ts-e.ts)/1000),repeat:0})));
+  sirenStop();render(true);toast('Ресепшен сбросил тревогу · '+hms(ts))}
 function demoData(){
   const now=Date.now(), s=S.site, pick=(i)=>s.devices.filter(d=>d.z.length&&d.p.length)[i];
   const mk=(i,lv,state,dt,extra)=>{const d=pick(i),z=s.Z[d.z[0]]||{};return Object.assign({t:'event',id:'d'+i+lv+dt,ts:now-dt*60e3,level:lv,state,floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'},extra||{})};
@@ -781,13 +999,397 @@ function demoData(){
     mk(60,'attention','Внимание',1440*2+200,{cleared:true}),mk(60,'attention','Внимание',1440*2+210),mk(15,'malfunction','Запылённость',1440*3+30),mk(90,'info','Устройство включено',1440*3+90),
     mk(150,'malfunction','Обрыв линии',1440*4+60),mk(150,'malfunction','Обрыв линии',1440*4+80,{cleared:true}),mk(33,'info','Устройство отключено',1440*5+15),mk(200,'info','Устройство включено',1440*6+300),
     {t:'event',id:'dt',ts:now-1500e3,level:'info',test:true,state:'Проверка',title:'Телефон подключён ✓',body:'Уведомления о пожаре будут приходить на iPhone',source:'agent'}].sort((a,b)=>b.ts-a.ts);
-  S.status={t:'status',ts:now-120e3,firesec:true,statesOk:true,devices:407,subs:1,disabled:5,active:[],hbMin:15};
+  // incident 62–75 min ago with the full timeline
+  const f=S.events.find(e=>e.id==='d40fire75'), fc=S.events.find(e=>e.id==='d40fire62');
+  if(f&&fc){fc.dur=13*60; S.events.push({t:'event',kind:'ack',id:'da1',ts:f.ts+48e3,level:'info',ref:[f.id],by:'Эрик',state:'Принято',source:'app'},
+    {t:'event',kind:'sound',id:'dsn1',ts:f.ts+95e3,level:'info',state:'Звук отключен',floor:f.floor,place:'ресепшен',source:'device'},
+    {t:'event',kind:'reset',id:'drs1',ts:fc.ts-1500,level:'info',state:'Сброс пожара',source:'zone'})}
+  // a month of alarms for the heat map: a few "noisy" sensors (kitchen, sauna, smoking rooms)
+  const pool=s.devices.filter(d=>d.z.length&&d.p.length&&/Дымов|Теплов/.test(d.t)); let seed=7; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const hot=[pool[12],pool[57],pool[91],pool[140],pool[201],pool[230]].filter(Boolean);
+  for(let i=0;i<46;i++){const d=rnd()<.72?hot[Math.floor(rnd()*hot.length)]:pool[Math.floor(rnd()*pool.length)];const z=s.Z[d.z[0]]||{};
+    const ts=now-(2+rnd()*28)*864e5, fast=rnd()<.7, id='h'+i;
+    S.events.push({t:'event',id,ts,level:rnd()<.8?'fire':'attention',state:'Пожар',floor:z.floor,place:z.place,zoneNo:z.no,zone:z.name,device:d.t,deviceName:d.n,guid:d.g,source:'device'},
+      {t:'event',id:id+'c',ts:ts+(fast?(1+rnd()*6):(15+rnd()*40))*60e3,cleared:true,level:'fire',state:'Пожар',floor:z.floor,place:z.place,zoneNo:z.no,device:d.t,deviceName:d.n,guid:d.g,source:'device'});
+    if(!fast&&rnd()<.3) S.events.push({t:'event',kind:'false',id:id+'f',ts:ts+3e5,level:'info',ref:[id],by:'Эрик',source:'app'})}
+  S.events.sort((a,b)=>b.ts-a.ts);
+  S.status={t:'status',ts:now-120e3,firesec:true,statesOk:true,devices:407,subs:2,disabled:5,active:[],hbMin:15,pingSec:60,escSec:60,phones:[{name:'Эрик',tier:1},{name:'Директор',tier:2}]};
+  S.ping={t:'ping',ts:now-17e3,fs:true,ok:true,sec:60}; S.seen=now-26*3600e3;
+  const mal=S.events.find(e=>e.level==='malfunction'&&!e.cleared); if(mal) S.status.active=[mal];
+}
+
+/* =====================================================================
+   v3: exact time, full-screen alarm, «Принял» + escalation timer,
+   evacuation route, quiet malfunctions, heat map, siren, haptics
+   ===================================================================== */
+const ESC_DEF = 150;
+const escSec = ()=>(S.status&&S.status.escSec)||ESC_DEF;
+const pad2 = n=>String(n).padStart(2,'0');
+const hms = ts=>{const d=new Date(ts);return pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds())};
+function mmss(sec){sec=Math.max(0,Math.floor(sec));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return (h?h+':'+pad2(m):pad2(m))+':'+pad2(s)}
+function agoSec(ts){if(!ts)return '—';const s=Math.max(0,Math.round((Date.now()-ts)/1000));if(s<60)return s+' с назад';if(s<3600)return Math.floor(s/60)+' мин '+pad2(s%60)+' с назад';if(s<86400)return Math.floor(s/3600)+' ч '+Math.floor(s%3600/60)+' мин назад';return new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+', '+hms(ts).slice(0,5)}
+const durTxt = sec=>sec<60?Math.round(sec)+' с':sec<3600?Math.floor(sec/60)+' мин '+Math.round(sec%60)+' с':Math.floor(sec/3600)+' ч '+Math.floor(sec%3600/60)+' мин';
+const dateTxt = ts=>new Date(ts).toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+const isAlarmEv = e=>!!e&&!e.cleared&&!e.test&&!e.kind&&rank(e.level)>=3;
+const myName = ()=>S.name||deviceName();
+
+/* ---------- active states (alarms + quiet malfunctions) ---------- */
+function activeStates(){
+  // Agent snapshot first, then newer events on top of it.
+  const act=new Map();
+  if(S.status&&S.status.active) S.status.active.forEach(e=>{if(rank(e.level)>=2)act.set(keyOf(e),e)});
+  const since=S.status?S.status.ts:0;
+  S.events.slice().reverse().forEach(e=>{ if(e.ts<since||e.test||e.kind) return; const k=keyOf(e);
+    if(e.cleared) act.delete(k); else if(rank(e.level)>=2) act.set(k,e)});
+  return [...act.values()].sort((a,b)=>rank(b.level)-rank(a.level)||b.ts-a.ts);
+}
+const activeMal = ()=>activeStates().filter(e=>e.level==='malfunction');
+
+/* ---------- one alarm = one incident with a timeline ---------- */
+function incInfo(a){
+  const open=((S.status&&S.status.open)||[]).find(o=>o.id===a.id);
+  let ack=S.events.filter(e=>e.kind==='ack'&&(e.ref||[]).includes(a.id)).sort((x,y)=>x.ts-y.ts)[0];
+  if(!ack&&open&&open.by) ack={by:open.by,ts:open.ackTs};
+  const clr=S.events.filter(e=>e.cleared&&!e.kind&&!e.test&&keyOf(e)===keyOf(a)&&e.ts>=a.ts).sort((x,y)=>x.ts-y.ts)[0];
+  const end=clr?clr.ts:Date.now(), inWin=e=>e.ts>=a.ts-2000&&e.ts<=end+120e3;
+  const snd=S.events.filter(e=>e.kind==='sound'&&!e.cleared&&inWin(e)).sort((x,y)=>x.ts-y.ts)[0];
+  const rst=S.events.filter(e=>e.kind==='reset'&&inWin(e)).sort((x,y)=>x.ts-y.ts)[0];
+  const fls=S.events.find(e=>e.kind==='false'&&(e.ref||[]).includes(a.id));
+  const rep=Math.max(a.repeat||0,open?open.repeats:0), tier=Math.max(a.tier||1,open?open.tier:1);
+  let next=null; if(!ack&&!clr) next=(open&&open.next)||((a.rts||a.ts)+escSec()*1000);
+  return {ack,clr,snd,rst,fls,rep,tier,next,end};
+}
+function tlSteps(a){const I=incInfo(a);const ended=I.rst||I.clr;return [
+  {c:'fire',ic:'🔥',t:'Сработал датчик',sub:[a.device,a.deviceName].filter(Boolean).join(' · '),ts:a.ts},
+  I.rep?{c:'rep',ic:'🔁',t:'Повтор ×'+I.rep,sub:'Никто не принял — отправлено очереди '+I.tier,ts:a.rts&&a.rts!==a.ts?a.rts:null}:null,
+  {c:I.ack?'ack':'wait',ic:'✓',t:I.ack?'Принял: '+I.ack.by:'«Принял» — ещё никто',ts:I.ack&&I.ack.ts},
+  {c:I.snd?'snd':'wait',ic:'🔇',t:'Звук отключён',sub:I.snd?'на ресепшене':'FireSec пока не сообщил',ts:I.snd&&I.snd.ts},
+  {c:ended?'rst':'wait',ic:'↺',t:I.clr?'Тревога сброшена':'Сброс',sub:I.clr?'длилась '+durTxt((I.clr.ts-a.ts)/1000):'',ts:ended&&(I.rst||I.clr).ts}
+].filter(Boolean)}
+function tlHTML(a){return '<div class="tl">'+tlSteps(a).map(s=>`<div class="st ${s.c}"><i>${s.ic}</i><div>${esc(s.t)}${s.sub?`<small>${esc(s.sub)}</small>`:''}</div><time class="mono">${s.ts?hms(s.ts):'—'}</time></div>`).join('')+'</div>'}
+
+/* ---------- full-screen alarm ---------- */
+let AXcur=null;
+S.axHide={}; S.muted={};
+function axAlarm(){return activeStates().filter(isAlarmEv).find(x=>!S.axHide[x.id])}
+function axShow(){S.axHide={};AXcur=null;renderAX();haptic()}
+function axHideNow(){activeStates().forEach(a=>S.axHide[a.id]=1);sirenStop();renderAX();render(true)}
+function renderAX(){
+  const box=$('#ax'); if(!S.site) return;
+  const a=axAlarm();
+  if(!a){ if(box.classList.contains('on')){box.classList.remove('on');box.innerHTML='';AXcur=null;sirenStop()} return }
+  const I=incInfo(a), all=activeStates().filter(isAlarmEv);
+  const sig=[a.id,!!I.ack,!!I.snd,!!(I.rst||I.clr),I.rep,all.length,!!S.muted[a.id]].join('|');
+  if(AXcur===sig) return;
+  const first=!AXcur||AXcur.split('|')[0]!==a.id; AXcur=sig;
+  box.className='ax on'+(a.level==='fire'?'':' att')+(I.ack?' acked':'');
+  if(first){
+    const pos=devPos(a), floor=a.floor||(pos&&pos.plan&&pos.plan.name)||'—';
+    box.innerHTML=`<div class="ax-bg"></div><div class="ax-in">
+      <div class="ax-top"><button onclick="axHideNow()" aria-label="Свернуть"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>Свернуть</button>
+        <div class="ax-clock mono" data-clock>${hms(Date.now())}</div>
+        <button id="axsnd" onclick="axSound()"></button></div>
+      <div class="ax-head"><div class="ax-kind"><i></i>${esc((a.level==='fire'?'Пожар':(a.state||'Внимание')).toUpperCase())}</div>
+        <div class="ax-floor">${esc(floor)}</div><div class="ax-place">${esc(a.place||a.zone||'')}</div>
+        <div class="ax-dev">${esc([a.device,a.deviceName,a.zoneNo?'зона '+a.zoneNo:''].filter(Boolean).join(' · '))}</div></div>
+      <div class="ax-timer"><div class="ax-ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="6"/><circle id="axarc" cx="32" cy="32" r="28" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="175.9" style="transition:stroke-dashoffset .9s linear"/></svg><b id="axrl">2:30</b></div>
+        <div style="min-width:0"><div class="ax-since mono" data-since="${a.ts}">${mmss((Date.now()-a.ts)/1000)}</div><small>с момента срабатывания · <b class="mono">${hms(a.ts)}</b></small><span class="ax-esc" id="axesc"></span></div></div>
+      ${pos&&pos.plan&&pos.plan.img?`<div class="ax-plan" id="axplan" onclick="openPlanFor('${esc(a.id)}')"><div class="stage" id="axstage"></div><div class="pcap" id="axcap"><i></i>${esc(pos.plan.name)} · ищу путь к выходу…</div></div>`:''}
+      <div class="ax-tl" id="axtl"></div>
+      <div id="axack"></div>
+      <div class="ax-row">${S.phone?`<a href="tel:${esc(S.phone)}" onclick="haptic()"><span>📞</span>Ресепшен</a>`:`<button onclick="axHideNow();go('settings')"><span>📞</span>Ресепшен</button>`}<a href="tel:101" onclick="haptic()"><span>🚒</span>101</a><button onclick="markFalse()"><span>🛈</span>Ложная</button></div>
+      <div class="ax-more" id="axmore"></div></div>`;
+    drawAXPlan(a);
+    if(!I.ack&&!S.muted[a.id]) sirenStart(); haptic();
+  }
+  $('#axtl').innerHTML=[['🔥','Сработал',a.ts],['✓','Принял',I.ack&&I.ack.ts],['🔇','Звук откл.',I.snd&&I.snd.ts],['↺','Сброс',(I.rst||I.clr)&&(I.rst||I.clr).ts]]
+    .map(([i,t,ts])=>`<div class="${ts?'on':''}"><i>${i}</i><small>${t}</small><b class="mono">${ts?hms(ts):'—'}</b></div>`).join('');
+  $('#axack').innerHTML=I.ack?`<button class="ax-ack done" onclick="haptic()">✓ Принял: ${esc(I.ack.by)} <small class="mono">${hms(I.ack.ts)}</small></button>`
+    :`<button class="ax-ack" onclick="ackAlarm()">✓ Принял</button>`;
+  $('#axmore').innerHTML=all.length>1?`Активных тревог: ${all.length} · <button onclick="axHideNow();go('home')">показать все</button>`:'Тревогу сбрасывает только ресепшен в FireSec';
+  if(I.ack) sirenStop();
+  axSoundBtn(); axTick(Date.now());
+}
+function axTick(now){
+  const box=$('#ax'); if(!box.classList.contains('on')) return;
+  const a=axAlarm(); if(!a) return; const I=incInfo(a), E=escSec();
+  const el=$('#axesc'), arc=$('#axarc'), rl=$('#axrl'); if(!el) return;
+  let frac=1, txt='', cls='';
+  if(I.ack){txt='Принял '+I.ack.by+' · '+hms(I.ack.ts);cls='ok';rl.textContent='✓';rl.style.fontSize='24px'}
+  else if(I.next){const left=(I.next-now)/1000;frac=Math.min(1,Math.max(0,1-left/E));
+    rl.textContent=left>0?mmss(left).replace(/^0/,''):'…';
+    txt=(I.rep?'Повтор ×'+I.rep+' отправлен · ':'')+(left>0?'следующему по списку через '+mmss(left).replace(/^0/,''):'отправляем повтор…');cls=I.rep?'rep':''}
+  el.className='ax-esc '+cls; el.textContent=txt;
+  arc.style.strokeDashoffset=(175.9*(1-(I.ack?1:frac))).toFixed(1); arc.style.stroke=I.ack?'#22c55e':'#fff';
+}
+function axSound(){const a=axAlarm();if(!a)return;haptic();if(SIREN.on){S.muted[a.id]=1;sirenStop()}else{delete S.muted[a.id];sirenStart(true)}axSoundBtn()}
+function axSoundBtn(){const b=$('#axsnd');if(b)b.innerHTML=SIREN.on?'🔊 Сирена':'🔇 Сирена'}
+async function ackAlarm(){
+  haptic(); const ids=activeStates().filter(isAlarmEv).map(a=>a.id), ts=Date.now(), by=myName();
+  const ev={t:'event',kind:'ack',id:ts+'-ack',ts,level:'info',ref:ids,by,state:'Принято',title:'✅ Принял: '+by,body:'',source:'app'};
+  S.events.unshift(ev); dbPut([ev]); sirenStop(); renderAX(); render();
+  if(DEMO){toast('Принято · '+hms(ts));demoAfterAck();return}
+  try{await relaySend({type:'ack',ids,name:by,ts});toast('Принято · '+hms(ts)+' · остальные это увидят')}
+  catch(e){toast('Нет интернета — «Принял» не дошёл. Нажмите ещё раз');S.events=S.events.filter(x=>x!==ev);AXcur=null;renderAX()}
+}
+async function markFalse(id){
+  haptic(); const ids=id?[id]:activeStates().filter(isAlarmEv).map(a=>a.id); if(!ids.length) return;
+  if(!confirm('Отметить как ложное срабатывание?\nЭто попадёт в тепловую карту. Сбросить тревогу может только ресепшен.')) return;
+  const ts=Date.now(), ev={t:'event',kind:'false',id:ts+'-false',ts,level:'info',ref:ids,by:myName(),state:'Ложное',source:'app'};
+  S.events.unshift(ev); dbPut([ev]); render();
+  if(!DEMO) try{await relaySend({type:'false',ids,name:myName()})}catch(e){}
+  toast('Отмечено как ложное');
+}
+
+/* ---------- siren (Web Audio, own sound) + vibration + haptics ---------- */
+const SIREN={ctx:null,on:false,n:null,vib:null};
+function audioUnlock(){
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){} // iOS 17+: play even with the silent switch
+  if(!SIREN.ctx){try{SIREN.ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return}}
+  if(SIREN.ctx.state==='suspended') SIREN.ctx.resume().then(()=>{ if(SIREN.want&&!SIREN.on) sirenStart(true) }).catch(()=>{});
+}
+document.addEventListener('pointerdown',audioUnlock,{passive:true});
+function sirenStart(force){
+  SIREN.want=true;
+  if(SIREN.on||(!force&&S.siren==='0')) return;
+  audioUnlock(); const c=SIREN.ctx; if(!c||c.state!=='running'){axSoundBtn();return}
+  const out=c.createGain(); out.gain.setValueAtTime(0.0001,c.currentTime); out.gain.exponentialRampToValueAtTime(0.32,c.currentTime+.25);
+  const lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3200; lp.Q.value=.7;
+  const o1=c.createOscillator(), o2=c.createOscillator(); o1.type='sawtooth'; o2.type='square';
+  const lfo=c.createOscillator(), lg=c.createGain(); lfo.type='triangle'; lfo.frequency.value=.55; lg.gain.value=420;
+  const base=c.createConstantSource?c.createConstantSource():null;
+  o1.frequency.value=1000; o2.frequency.value=1004;
+  lfo.connect(lg); lg.connect(o1.frequency); lg.connect(o2.frequency);
+  const g2=c.createGain(); g2.gain.value=.35; o2.connect(g2); g2.connect(lp); o1.connect(lp); lp.connect(out); out.connect(c.destination);
+  // short "yelp" pulses on top: amplitude tremolo
+  const trem=c.createOscillator(), tg=c.createGain(); trem.frequency.value=6; tg.gain.value=.12; trem.connect(tg); tg.connect(out.gain);
+  [o1,o2,lfo,trem].forEach(o=>o.start()); SIREN.n={out,nodes:[o1,o2,lfo,trem]}; SIREN.on=true;
+  if(navigator.vibrate){navigator.vibrate([600,250,600,250,1200]);SIREN.vib=setInterval(()=>navigator.vibrate([600,250,600,250,1200]),3200)}
+  axSoundBtn();
+}
+function sirenStop(){
+  SIREN.want=false; if(SIREN.vib){clearInterval(SIREN.vib);SIREN.vib=null;try{navigator.vibrate(0)}catch(e){}}
+  if(!SIREN.on) return; SIREN.on=false; const c=SIREN.ctx,n=SIREN.n; SIREN.n=null;
+  try{n.out.gain.cancelScheduledValues(c.currentTime);n.out.gain.setValueAtTime(n.out.gain.value,c.currentTime);n.out.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+.2);setTimeout(()=>n.nodes.forEach(o=>{try{o.stop()}catch(e){}}),260)}catch(e){}
+  axSoundBtn();
+}
+function sirenTest(){haptic();audioUnlock();setTimeout(()=>{sirenStart(true);toast('Так звучит сирена в приложении');setTimeout(()=>{if(!axAlarm())sirenStop()},3000)},60)}
+// iPhone has no Vibration API in Safari; iOS 18 gives a haptic tick when a switch control toggles.
+function haptic(){try{if(navigator.vibrate){navigator.vibrate(25);return}const l=document.createElement('label'),i=document.createElement('input');i.type='checkbox';i.setAttribute('switch','');l.appendChild(i);l.style.display='none';document.body.appendChild(l);l.click();l.remove()}catch(e){}}
+
+/* ---------- evacuation route: path along corridors of the 3D plan picture ---------- */
+const GRID={};
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+function getExits(pid){let loc=null;try{loc=JSON.parse(ls.get('exits')||'null')}catch(e){}return (loc&&loc[pid])||((window.FM_EXITS||{})[pid])||[]}
+function setExits(pid,arr){let loc={};try{loc=JSON.parse(ls.get('exits')||'{}')||{}}catch(e){}if(arr)loc[pid]=arr;else delete loc[pid];ls.set('exits',JSON.stringify(loc));delete GRID[pid];Object.keys(ROUTES).forEach(k=>{if(k.startsWith(pid+'|'))delete ROUTES[k]})}
+async function planGrid(p){
+  if(GRID[p.id]) return GRID[p.id];
+  const img=await loadImg(p.img), gw=300, gh=Math.max(40,Math.round(gw*p.h/p.w)), N=gw*gh;
+  const cv=document.createElement('canvas'); cv.width=gw; cv.height=gh; const cx=cv.getContext('2d',{willReadFrequently:true}); cx.drawImage(img,0,0,gw,gh);
+  const d=cx.getImageData(0,0,gw,gh).data, wall=new Uint8Array(N);
+  for(let i=0;i<N;i++){const r=d[i*4],g=d[i*4+1],b=d[i*4+2],L=.299*r+.587*g+.114*b;wall[i]=(L>84||(r-b>50&&r>90))?1:0}
+  // sensor dots drawn on the picture are tiny bright blobs: not walls
+  const seen=new Uint8Array(N), q=new Int32Array(N);
+  for(let i=0;i<N;i++){ if(!wall[i]||seen[i]) continue; let h=0,t=0; q[t++]=i; seen[i]=1;
+    while(h<t){const c=q[h++],x=c%gw,y=(c/gw)|0; for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const n=ny*gw+nx;if(wall[n]&&!seen[n]){seen[n]=1;q[t++]=n}}}
+    if(t<=10) for(let k=0;k<t;k++) wall[q[k]]=0; }
+  // outside the building: keep the route within the area of this plan's sensors and exits
+  const xs=[],ys=[]; S.site.devices.forEach(d=>d.p.forEach(q=>{if(q[0]===p.id){xs.push(q[1]);ys.push(q[2])}})); getExits(p.id).forEach(e=>{xs.push(e[0]);ys.push(e[1])});
+  if(xs.length>2){const x0=Math.floor((Math.min(...xs)-.035)*gw),x1=Math.ceil((Math.max(...xs)+.035)*gw),y0=Math.floor((Math.min(...ys)-.05)*gh),y1=Math.ceil((Math.max(...ys)+.05)*gh);
+    for(let y=0;y<gh;y++)for(let x=0;x<gw;x++)if(x<x0||x>x1||y<y0||y>y1)wall[y*gw+x]=1}
+  const dist=new Float32Array(N); for(let i=0;i<N;i++) dist[i]=wall[i]?0:1e6;
+  const S2=Math.SQRT2;
+  for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){const i=y*gw+x;if(!dist[i])continue;let v=dist[i];if(x>0)v=Math.min(v,dist[i-1]+1);if(y>0){v=Math.min(v,dist[i-gw]+1);if(x>0)v=Math.min(v,dist[i-gw-1]+S2);if(x<gw-1)v=Math.min(v,dist[i-gw+1]+S2)}dist[i]=v}
+  for(let y=gh-1;y>=0;y--)for(let x=gw-1;x>=0;x--){const i=y*gw+x;if(!dist[i])continue;let v=dist[i];if(x<gw-1)v=Math.min(v,dist[i+1]+1);if(y<gh-1){v=Math.min(v,dist[i+gw]+1);if(x<gw-1)v=Math.min(v,dist[i+gw+1]+S2);if(x>0)v=Math.min(v,dist[i+gw-1]+S2)}dist[i]=v}
+  return GRID[p.id]={gw,gh,wall,dist};
+}
+function snapCell(G,x,y){const {gw,gh,dist}=G;let cx=Math.min(gw-1,Math.max(0,Math.round(x*gw-.5))),cy=Math.min(gh-1,Math.max(0,Math.round(y*gh-.5)));
+  let best=-1,bd=1e9;for(let r=0;r<=30&&best<0;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;const nx=cx+dx,ny=cy+dy;if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const i=ny*gw+nx;if(dist[i]>=1.4){const dd=dx*dx+dy*dy;if(dd<bd){bd=dd;best=i}}}
+  return best}
+function findPath(G,s,targets){
+  const {gw,gh,dist}=G,N=gw*gh,g=new Float32Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1),done=new Uint8Array(N);
+  const T=targets.map(t=>[t%gw,(t/gw)|0]), isT=new Set(targets);
+  const hfn=i=>{const x=i%gw,y=(i/gw)|0;let m=1e9;for(const [tx,ty] of T){const d=Math.hypot(tx-x,ty-y);if(d<m)m=d}return m};
+  const H=[],push=(f,i)=>{H.push([f,i]);let k=H.length-1;while(k>0){const p=(k-1)>>1;if(H[p][0]<=H[k][0])break;[H[p],H[k]]=[H[k],H[p]];k=p}},
+    pop=()=>{const top=H[0],last=H.pop();if(H.length){H[0]=last;let k=0;for(;;){const l=2*k+1,r=l+1;let m=k;if(l<H.length&&H[l][0]<H[m][0])m=l;if(r<H.length&&H[r][0]<H[m][0])m=r;if(m===k)break;[H[m],H[k]]=[H[k],H[m]];k=m}}return top};
+  g[s]=0; push(hfn(s),s); const D=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,Math.SQRT2],[1,-1,Math.SQRT2],[-1,1,Math.SQRT2],[-1,-1,Math.SQRT2]];
+  let it=0;
+  while(H.length&&it++<400000){const [,c]=pop(); if(done[c])continue; done[c]=1; if(isT.has(c)){const out=[];for(let k=c;k>=0;k=prev[k])out.push(k);return out.reverse()}
+    const x=c%gw,y=(c/gw)|0;
+    for(const [dx,dy,w] of D){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const n=ny*gw+nx;if(done[n])continue;
+      // doors are not always drawn on the 3D plans: a wall can be crossed, but it is very "expensive"
+      const wl=dist[n]<1; if(dx&&dy&&(wl||dist[y*gw+nx]<1||dist[ny*gw+x]<1))continue;
+      const ng=g[c]+w*(wl?45:1+2.2/(Math.min(dist[n],8)+.3)); if(ng<g[n]){g[n]=ng;prev[n]=c;push(ng+hfn(n),n)}}}
+  return null;
+}
+function losClear(G,a,b){const {gw,dist}=G;let x0=a%gw,y0=(a/gw)|0;const x1=b%gw,y1=(b/gw)|0;const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0));for(let k=1;k<n;k++){const x=Math.round(x0+(x1-x0)*k/n),y=Math.round(y0+(y1-y0)*k/n);if(dist[y*gw+x]<2.2)return false}return true}
+const ROUTES={};
+async function routeFor(p,x,y){
+  const key=p.id+'|'+x.toFixed(4)+'|'+y.toFixed(4); if(ROUTES[key]!==undefined) return ROUTES[key];
+  const ex=getExits(p.id); if(!ex.length||!p.img) return ROUTES[key]=null;
+  try{
+    const G=await planGrid(p), s=snapCell(G,x,y);
+    const tcells=[]; ex.forEach(e=>{const c=snapCell(G,e[0],e[1]);if(c>=0){const cx=c%G.gw,cy=(c/G.gw)|0;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const nx=cx+dx,ny=cy+dy;if(nx>=0&&ny>=0&&nx<G.gw&&ny<G.gh&&G.dist[ny*G.gw+nx]>=1)tcells.push(ny*G.gw+nx)}}});
+    let path=s>=0&&tcells.length?findPath(G,s,tcells):null;
+    const toN=i=>[((i%G.gw)+.5)/G.gw,(((i/G.gw)|0)+.5)/G.gh];
+    let pts, exit;
+    if(path){
+      const keep=[path[0]];let i=0;while(i<path.length-1){let j=path.length-1;while(j>i+1&&!losClear(G,path[i],path[j]))j--;keep.push(path[j]);i=j}
+      pts=keep.map(toN); const end=pts[pts.length-1];
+      exit=ex.reduce((b,e)=>Math.hypot(e[0]-end[0],e[1]-end[1])<Math.hypot(b[0]-end[0],b[1]-end[1])?e:b,ex[0]);
+      pts.unshift([x,y]); pts.push([exit[0],exit[1]]);
+    } else { // no corridor found: show the direction to the nearest exit
+      exit=ex.reduce((b,e)=>Math.hypot(e[0]-x,e[1]-y)<Math.hypot(b[0]-x,b[1]-y)?e:b,ex[0]); pts=[[x,y],[exit[0],exit[1]]];
+    }
+    return ROUTES[key]={pts,exit,direct:!path};
+  }catch(e){console.warn('route',e);return ROUTES[key]=null}
+}
+function pathD(pts,W,H){ // rounded corners
+  const P=pts.map(p=>[p[0]*W,p[1]*H]); if(P.length<3) return 'M'+P.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' L');
+  let d=`M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+  for(let i=1;i<P.length-1;i++){const [ax,ay]=P[i-1],[bx,by]=P[i],[cx,cy]=P[i+1];
+    const l1=Math.hypot(bx-ax,by-ay),l2=Math.hypot(cx-bx,cy-by),r=Math.min(26,l1/2,l2/2);
+    const p1=[bx-(bx-ax)/l1*r,by-(by-ay)/l1*r],p2=[bx+(cx-bx)/l2*r,by+(cy-by)/l2*r];
+    d+=` L${p1[0].toFixed(1)},${p1[1].toFixed(1)} Q${bx.toFixed(1)},${by.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`}
+  const L=P[P.length-1]; return d+` L${L[0].toFixed(1)},${L[1].toFixed(1)}`;
+}
+function pathLen(pts,W,H){let s=0;for(let i=1;i<pts.length;i++)s+=Math.hypot((pts[i][0]-pts[i-1][0])*W,(pts[i][1]-pts[i-1][1])*H);return s}
+// SVG for route + fire waves + exit; k = 1/scale so sizes stay constant on screen
+function routeSVG(W,H,fx,fy,R,k,opt){
+  opt=opt||{}; let s=`<svg class="rsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  if(R){const d=pathD(R.pts,W,H),L=pathLen(R.pts,W,H),P=22*k;
+    s+=`<path class="r-glow" d="${d}" stroke-width="${(16*k).toFixed(2)}"/>
+      <path class="r-main ${opt.anim?'r-draw':''}" d="${d}" stroke-width="${(6*k).toFixed(2)}" style="--L:${L.toFixed(0)};stroke-dasharray:${R.direct?(10*k).toFixed(1)+' '+(8*k).toFixed(1):L.toFixed(0)+' '+L.toFixed(0)};${opt.anim?'animation-delay:'+(opt.delay||0)+'s':''}"/>
+      ${R.direct?'':`<path class="r-flow r-flowa" d="${d}" stroke-width="${(2.4*k).toFixed(2)}" style="--P:${P.toFixed(1)};stroke-dasharray:${(3*k).toFixed(1)} ${(P-3*k).toFixed(1)};${opt.anim?'animation:rflow 1s linear infinite,fin .5s ease '+((opt.delay||0)+1.3)+'s both':''}"/>`}`;
+    const [ex,ey]=[R.exit[0]*W,R.exit[1]*H],bw=78*k,bh=26*k;
+    s+=`<g class="exitm" style="${opt.anim?'animation:pop .5s var(--spring) both '+((opt.delay||0)+1.2)+'s;transform-box:fill-box;transform-origin:center':''}"><rect x="${(ex-bw/2).toFixed(1)}" y="${(ey-bh-12*k).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="${(9*k).toFixed(1)}" stroke-width="${(2*k).toFixed(2)}"/><text x="${ex.toFixed(1)}" y="${(ey-12*k-bh/2+4*k).toFixed(1)}" text-anchor="middle" font-size="${(11.5*k).toFixed(1)}">🚪 ВЫХОД</text><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="${(6*k).toFixed(1)}" fill="#16a34a" stroke="#fff" stroke-width="${(2*k).toFixed(2)}"/></g>`;
+  }
+  if(fx!=null){const fxp=fx*W,fyp=fy*H,wr=58*k;
+    s+=`<circle class="wave" cx="${fxp.toFixed(1)}" cy="${fyp.toFixed(1)}" r="${wr.toFixed(1)}" stroke-width="${(3*k).toFixed(2)}"/><circle class="wave" cx="${fxp.toFixed(1)}" cy="${fyp.toFixed(1)}" r="${wr.toFixed(1)}" stroke-width="${(3*k).toFixed(2)}"/><circle class="wave" cx="${fxp.toFixed(1)}" cy="${fyp.toFixed(1)}" r="${wr.toFixed(1)}" stroke-width="${(3*k).toFixed(2)}"/>
+      <circle class="firept" cx="${fxp.toFixed(1)}" cy="${fyp.toFixed(1)}" r="${(10*k).toFixed(1)}" stroke-width="${(3*k).toFixed(2)}"/>`}
+  return s+'</svg>';
+}
+async function drawAXPlan(a){
+  const wrap=$('#axplan'), st=$('#axstage'), pos=devPos(a); if(!wrap||!st||!pos) return;
+  const p=pos.plan, W=p.w||1000, H=p.h||800, r=wrap.getBoundingClientRect();
+  const fit=Math.min(r.width/W,r.height/H);
+  st.style.transition='none'; st.style.width=W+'px'; st.style.height=H+'px';
+  st.style.transform=`translate(${(r.width-W*fit)/2}px,${(r.height-H*fit)/2}px) scale(${fit})`;
+  st.innerHTML=`<img src="${p.img}" width="${W}" height="${H}">`;
+  const R=await routeFor(p,pos.x,pos.y); if(!document.body.contains(st)) return;
+  // zoom target: the fire point, and the way to the exit
+  let xs=[pos.x*W],ys=[pos.y*H]; if(R) R.pts.forEach(q=>{xs.push(q[0]*W);ys.push(q[1]*H)});
+  const pad=120, bx0=Math.min(...xs)-pad, bx1=Math.max(...xs)+pad, by0=Math.min(...ys)-pad-30, by1=Math.max(...ys)+pad;
+  let s=Math.min(r.width/(bx1-bx0),r.height/(by1-by0)); s=Math.max(fit*1.25,Math.min(fit*3,s));
+  const cx=(bx0+bx1)/2, cy=(by0+by1)/2; let tx=r.width/2-cx*s, ty=r.height/2-cy*s;
+  st.insertAdjacentHTML('beforeend',routeSVG(W,H,pos.x,pos.y,R,1/s,{anim:true,delay:1.1}));
+  const cap=$('#axcap'); if(cap) cap.innerHTML=R?`<i></i>${esc(p.name)} · ${R.direct?'направление к выходу':'путь к выходу'}: ${esc(R.exit[2]||'выход')}`:`${esc(p.name)} · выходы не отмечены`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{st.style.transition='';st.style.transform=`translate(${tx}px,${ty}px) scale(${s})`}));
+}
+
+/* ---------- heat map: which sensors trigger most (and falsely) ---------- */
+function heatData(){
+  const days={'7':7,'30':30,'all':0}[S.hPer]; const since=days?Date.now()-days*864e5:0;
+  const per={};
+  S.events.filter(e=>isAlarmEv(e)&&!e.startup&&e.ts>=since).forEach(a=>{
+    const k=a.guid||('z'+a.zoneNo), I=incInfo(a), fl=!!I.fls||!!(I.clr&&(I.clr.ts-a.ts)<600e3);
+    const r=per[k]||(per[k]={k,n:0,f:0,last:0,ev:a}); r.n++; if(fl)r.f++; if(a.ts>r.last){r.last=a.ts;r.ev=a}});
+  if(!days&&S.status&&S.status.stats) S.status.stats.forEach(([k,n,f,q,last])=>{const r=per[k]||(per[k]={k,n:0,f:0,last:0,ev:null});r.n=Math.max(r.n,n);r.f=Math.max(r.f,Math.min(r.n,Math.max(f,q)));r.last=Math.max(r.last,last||0)});
+  return Object.values(per).map(r=>{const d=S.site.D[r.k];const z=d&&d.z.length?S.site.Z[d.z[0]]:(r.ev&&r.ev.zoneNo?S.site.Z[r.ev.zoneNo]:null);
+    const pp=d&&d.p&&d.p[0];return Object.assign(r,{d,z,plan:pp?pp[0]:null,x:pp?pp[1]:null,y:pp?pp[2]:null,v:S.hMode==='all'?r.n:r.f})}).filter(r=>r.v>0);
+}
+function heatView(){
+  const rows=heatData().sort((a,b)=>b.v-a.v||b.last-a.last), N=rows.reduce((s,r)=>s+r.n,0), F=rows.reduce((s,r)=>s+r.f,0);
+  const byPlan={}; rows.forEach(r=>{if(r.plan)byPlan[r.plan]=(byPlan[r.plan]||0)+r.v});
+  const plans=S.site.plans.slice().sort((a,b)=>planOrder(a)-planOrder(b));
+  if(!S.hPlan||!S.site.P[S.hPlan]) S.hPlan=(Object.entries(byPlan).sort((a,b)=>b[1]-a[1])[0]||[plans[2]?plans[2].id:plans[0].id])[0];
+  const mx=Math.max(1,...rows.map(r=>r.v));
+  return `<div class="chips rv">${[['7','7 дней'],['30','30 дней'],['all','Всё время']].map(([k,v])=>`<button class="chip ${S.hPer===k?'on':''}" onclick="S.hPer='${k}';ls.set('hPer','${k}');render()">${v}</button>`).join('')}
+      <span style="width:8px;flex:none"></span>${[['false','Ложные'],['all','Все срабатывания']].map(([k,v])=>`<button class="chip ${S.hMode===k?'on':''}" onclick="S.hMode='${k}';render()">${v}</button>`).join('')}</div>
+    <div class="hstats rv"><div class="wcard"><b>${N}</b><small>срабатываний</small></div><div class="wcard"><b style="color:var(--orange)">${F}</b><small>вероятно ложных</small></div><div class="wcard"><b style="color:${N&&F/N>.5?'var(--fire)':'var(--green)'}">${N?Math.round(F/N*100):0}%</b><small>доля ложных</small></div></div>
+    <div class="chips fl2 rv">${plans.map(p=>`<button class="chip ${S.hPlan===p.id?'on':''}" onclick="S.hPlan='${p.id}';render()">${esc(p.name)}${byPlan[p.id]?`<span class="cn">${byPlan[p.id]}</span>`:''}</button>`).join('')}</div>
+    <div class="heatwrap rv" id="hw"><div class="heatleg">мало<i></i>часто</div></div>
+    <div class="sect rv"><span class="st">${S.hMode==='all'?'Чаще всего срабатывают':'Чаще всего ложные'}</span></div>
+    <div class="list">${rows.length?rows.slice(0,10).map((r,i)=>{const t=r.d?r.d.t:(r.ev&&r.ev.device)||'Зона '+r.k.slice(1),where=[r.z&&r.z.floor,r.z&&r.z.place].filter(Boolean).join(', ')||(r.ev&&r.ev.zone)||'';
+      return `<button class="hrow rv" onclick="${r.d?`devInfo('${r.k}')`:''}"><span class="rk" style="${i<3?'background:linear-gradient(135deg,#ff701e,#ff1f1f)':''}">${i+1}</span><div style="flex:1;min-width:0"><div class="t1" style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t)} · ${esc(where)}</div><div style="font-size:11px;color:var(--wt-m)">${esc(r.d?r.d.n:'')}${r.last?' · последний раз '+new Date(r.last).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+' '+hms(r.last).slice(0,5):''}</div><div class="hb"><i style="width:${Math.round(r.v/mx*100)}%"></i></div></div><div class="n">${r.v}<small>${S.hMode==='all'?(r.f?r.f+' ложн.':'раз'):'из '+r.n}</small></div></button>`}).join('')
+      :'<div class="empty rv">Срабатываний за этот период нет. Карта заполнится сама, когда датчики начнут срабатывать.</div>'}</div>
+    <p class="note rv">Ложными считаются тревоги, которые отметили кнопкой «Ложная», и тревоги, сброшенные на ресепшене быстрее чем за 10 минут. «Всё время» учитывает и статистику агента с ресепшена.</p>`;
+}
+async function drawHeat(){
+  const w=$('#hw'); if(!w) return; const p=S.site.P[S.hPlan]; if(!p||!p.img) return;
+  const r=w.getBoundingClientRect(), W=p.w, H=p.h, s=Math.min(r.width/W,r.height/H), ox=(r.width-W*s)/2, oy=(r.height-H*s)/2;
+  const img=new Image(); img.src=p.img; img.style.cssText=`width:${W*s}px;height:${H*s}px;left:${ox}px;top:${oy}px;opacity:.85`; w.appendChild(img);
+  const dpr=Math.min(2,window.devicePixelRatio||1), cv=document.createElement('canvas'); cv.width=r.width*dpr; cv.height=r.height*dpr; cv.style.width=r.width+'px'; cv.style.height=r.height+'px';
+  const cx=cv.getContext('2d'); cx.scale(dpr,dpr);
+  const rows=heatData().filter(x=>x.plan===p.id), mx=Math.max(1,...rows.map(x=>x.v)), R=Math.max(30,Math.min(70,r.width/7));
+  rows.forEach(x=>{const px=ox+x.x*W*s, py=oy+x.y*H*s, a=.25+.75*x.v/mx;const g=cx.createRadialGradient(px,py,0,px,py,R);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=g;cx.beginPath();cx.arc(px,py,R,0,7);cx.fill()});
+  // colorize alpha → palette
+  const pal=document.createElement('canvas');pal.width=256;pal.height=1;const pc=pal.getContext('2d'),lg=pc.createLinearGradient(0,0,256,0);
+  [[0,'#1d4ed8'],[.35,'#facc15'],[.65,'#ff701e'],[1,'#ff1f1f']].forEach(([o,c])=>lg.addColorStop(o,c));pc.fillStyle=lg;pc.fillRect(0,0,256,1);const P=pc.getImageData(0,0,256,1).data;
+  const id=cx.getImageData(0,0,cv.width,cv.height),d=id.data;
+  for(let i=0;i<d.length;i+=4){const al=d[i+3];if(!al)continue;const k=Math.min(255,al)*4;d[i]=P[k];d[i+1]=P[k+1];d[i+2]=P[k+2];d[i+3]=Math.min(255,al*1.5)}
+  cx.putImageData(id,0,0); w.appendChild(cv);
+  rows.sort((a,b)=>b.v-a.v).slice(0,6).forEach(x=>{const el=document.createElement('div');el.style.cssText=`position:absolute;z-index:2;left:${ox+x.x*W*s}px;top:${oy+x.y*H*s}px;transform:translate(-50%,-50%);min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#fff;color:#c0180f;font:800 11px/20px -apple-system,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4)`;el.textContent=x.v;w.appendChild(el)});
+}
+
+/* ---------- settings helpers ---------- */
+async function resub(){
+  if(DEMO) return;
+  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+    if(sub){await relaySend({type:'sub',sub:sub.toJSON(),name:myName(),tier:S.tier,app:location.origin+location.pathname.replace(/[^/]*$/,'')});toast('Сохранено и отправлено на ресепшен')}
+    else toast('Сохранено. Включите уведомления, чтобы ресепшен узнал этот телефон')}catch(e){toast('Сохранено на телефоне. Нет связи с сервером — отправим позже')}
+}
+function saveName(v){S.name=v.trim();ls.set('name',S.name);resub()}
+function setTier(t){haptic();S.tier=t;ls.set('tier',String(t));render();resub()}
+function toggleSiren(){haptic();S.siren=S.siren==='0'?'1':'0';ls.set('siren',S.siren);render()}
+function setBadge(n){try{if('setAppBadge' in navigator){n?navigator.setAppBadge(n):navigator.clearAppBadge()}}catch(e){}}
+
+/* ---------- live clock + timers: update text in place every second ---------- */
+function tick(){
+  const now=Date.now();
+  document.querySelectorAll('[data-clock]').forEach(el=>el.textContent=hms(now));
+  document.querySelectorAll('[data-date]').forEach(el=>el.textContent=dateTxt(now));
+  document.querySelectorAll('[data-ago]').forEach(el=>el.textContent=agoSec(+el.dataset.ago));
+  document.querySelectorAll('[data-since]').forEach(el=>el.textContent=mmss((now-+el.dataset.since)/1000));
+  if(DEMO) demoTick(now);
+  renderAX(); axTick(now);
+}
+setInterval(tick,1000);
+
+/* ---------- exits editor on the plan ---------- */
+function exitEditToggle(){haptic();S.exitEdit=!S.exitEdit;render(true);toast(S.exitEdit?'Режим разметки выходов':'Разметка сохранена на этом телефоне')}
+function exitTap(e){
+  const p=S.site.P[S.plan], pw=$('#pw'); if(!p||!pw) return; const r=pw.getBoundingClientRect(), W=p.w||1000, H=p.h||800;
+  const x=((e.clientX-r.left-PZ.x)/PZ.s)/W, y=((e.clientY-r.top-PZ.y)/PZ.s)/H; if(x<0||y<0||x>1||y>1) return;
+  const ex=getExits(p.id).slice(); const near=ex.findIndex(q=>Math.hypot((q[0]-x)*W*PZ.s,(q[1]-y)*H*PZ.s)<26);
+  if(near>=0) ex.splice(near,1); else ex.push([+x.toFixed(4),+y.toFixed(4),/этаж/i.test(p.name)?'Лестница':'Выход']);
+  setExits(p.id,ex); haptic(); const X=PZ.x,Y=PZ.y,Sc=PZ.s; drawPlan(); PZ.x=X;PZ.y=Y;PZ.s=Sc;applyPZ();
+}
+function resetExits(){if(!confirm('Вернуть выходы этого плана к исходной разметке?'))return;setExits(S.plan,null);render(true)}
+async function copyExits(){
+  const out={}; S.site.plans.forEach(p=>{const e=getExits(p.id);if(e.length)out[p.id]=e});
+  const txt='FM_EXITS '+JSON.stringify(out);
+  try{await navigator.clipboard.writeText(txt);toast('Разметка скопирована — отправьте её разработчику')}catch(e){prompt('Скопируйте разметку:',txt)}
+}
+
+/* ---------- demo: escalation, «Принял», sound off, reset, history for the heat map ---------- */
+function demoTick(now){
+  if(S.ping&&now-S.ping.ts>60e3){S.ping.ts=now;if(S.view==='home'&&!$('#sheet').classList.contains('on'))render()}
+  const a=activeStates().find(isAlarmEv); if(!a) return; const I=incInfo(a); if(I.ack||I.clr) return;
+  if(now>=(a.rts||a.ts)+escSec()*1000){ a.repeat=(a.repeat||0)+1; a.rts=now; a.tier=Math.min(3,(a.tier||1)+1);
+    AXcur=null; toast('Никто не принял — тревога отправлена повторно и очереди '+a.tier); render() }
+}
+function demoAfterAck(){
+  setTimeout(()=>{const a=activeStates().find(isAlarmEv);if(!a)return;const ts=Date.now();
+    S.events.unshift({t:'event',kind:'sound',id:'ds'+ts,ts,level:'info',state:'Звук отключен',floor:a.floor,place:'ресепшен',source:'device'});
+    toast('Ресепшен отключил звук · '+hms(ts));render()},6000);
 }
 
 /* ---------- boot ---------- */
 async function boot(){
   S.phone=ls.get('phone')||CFG.phone||''; S.seen=+ls.get('seen')||0; S.range=ls.get('range')||'week';
   S.theme=ls.get('theme')||'day'; document.body.classList.toggle('night',S.theme==='night');
+  S.name=ls.get('name')||''; S.tier=+(ls.get('tier')||1)||1; S.siren=ls.get('siren')||'1'; S.hPer=ls.get('hPer')||'30';
   if('serviceWorker' in navigator && !DEMO){navigator.serviceWorker.register('sw.js').catch(()=>{});
     navigator.serviceWorker.addEventListener('message',async m=>{if(m.data&&m.data.type==='event'){await loadEvents();render()}});}
   if(DEMO){ S.code='DEMO'; S.site=indexSite(window.FM_SITE_PLAIN||await (await fetch('site.json')).json()); demoData(); render(true); document.body.insertAdjacentHTML('beforeend','<div class="demo-badge">ДЕМО</div>');
@@ -795,7 +1397,7 @@ async function boot(){
   const code=ls.get('code')||await kvGet('code');
   if(!code){ if(isIOS&&!isStandalone()) obInstall(); else obCode(); return }
   try{ S.code=code; S.site=indexSite(await decryptSite(code)); }catch(e){ obCode(); return }
-  const st=await kvGet('status'); if(st) S.status=st;
+  const st=await kvGet('status'); if(st) S.status=st; const pg=await kvGet('ping'); if(pg) S.ping=pg;
   await loadEvents(); render(true); relayPoll();
   if(('Notification' in window)&&Notification.permission==='default'&&isStandalone()) setTimeout(()=>toast('Включите уведомления в «Настройках»'),1200);
 }

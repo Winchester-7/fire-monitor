@@ -1,6 +1,7 @@
-// Fire Monitor service worker: shows push notifications, keeps history, caches the app.
-const CACHE = 'fm-v2';
-const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'site.enc', 'bg.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
+// Fire Monitor service worker: shows push notifications, keeps history, caches the app,
+// puts the number of active alarms/malfunctions on the app icon.
+const CACHE = 'fm-v3';
+const SHELL = ['./', 'index.html', 'config.js', 'exits.js', 'manifest.webmanifest', 'site.enc', 'bg.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
@@ -16,14 +17,20 @@ async function store(ev) { try { const d = await idb(); await new Promise(r => {
 self.addEventListener('push', e => {
   let ev = {};
   try { ev = e.data.json(); } catch (x) { ev = {t: 'event', id: 'p' + Date.now(), ts: Date.now(), level: 'info', title: 'Fire Monitor', body: e.data ? e.data.text() : ''}; }
-  const urgent = ['fire', 'attention', 'alarm'].includes(ev.level) && !ev.cleared;
-  const tag = ev.test ? 'test' : (ev.guid || ('z' + (ev.zoneNo || ''))) + (ev.cleared ? '-c' : '');
+  const alarm = ['fire', 'attention', 'alarm'].includes(ev.level) && !ev.cleared && !ev.kind;
+  // malfunctions, «Принял», sound off, reset: quiet (no sound, no vibration)
+  const quiet = !alarm && !ev.test;
+  const tag = ev.test ? 'test' : ev.kind ? ev.kind + '-' + ev.id : (ev.guid || ('z' + (ev.zoneNo || ''))) + (ev.cleared ? '-c' : '');
   e.waitUntil((async () => {
     await store(ev);
     await self.registration.showNotification(ev.title || 'Fire Monitor', {
-      body: ev.body || '', tag, renotify: true, requireInteraction: urgent, icon: 'icons/icon-192.png', badge: 'icons/icon-96.png',
-      data: {id: ev.id}, vibrate: urgent ? [400, 150, 400, 150, 800] : [200], silent: false,
+      body: ev.body || '', tag, renotify: alarm, requireInteraction: alarm, icon: 'icons/icon-192.png', badge: 'icons/icon-96.png',
+      data: {id: ev.id}, vibrate: alarm ? [400, 150, 400, 150, 800] : undefined, silent: quiet, timestamp: ev.ts || Date.now(),
     });
+    if (ev.bld && self.navigator && 'setAppBadge' in self.navigator) {
+      const n = (ev.bld.f || 0) + (ev.bld.a || 0) + (ev.bld.m || 0);
+      try { n ? await self.navigator.setAppBadge(n) : await self.navigator.clearAppBadge(); } catch (x) {}
+    }
     const cs = await self.clients.matchAll({type: 'window', includeUncontrolled: true});
     cs.forEach(c => c.postMessage({type: 'event', ev}));
   })());
