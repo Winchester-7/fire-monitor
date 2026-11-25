@@ -555,7 +555,7 @@ async function relayPoll(){
     const since = S.lastId && Date.now()-S.lastPoll<3*3600e3 ? S.lastId : '12h';
     const r = await fetch(`${CFG.relay}/${topic('e')}/json?poll=1&since=${encodeURIComponent(since)}`,{cache:'no-store'});
     const txt = await r.text(); const evs=[]; let st=null, pg=null;
-    txt.split('\n').forEach(l=>{if(!l.trim())return;try{const m=JSON.parse(l);if(m.event!=='message')return;S.lastId=m.id;const o=JSON.parse(m.message);if(o.t==='event')evs.push(o);else if(o.t==='status'&&(!st||o.ts>st.ts))st=o;else if(o.t==='ping'&&(!pg||o.ts>pg.ts))pg=o}catch(e){}});
+    txt.split('\n').forEach(l=>{if(!l.trim())return;try{const m=JSON.parse(l);if(m.event!=='message')return;S.lastId=m.id;const o=JSON.parse(m.message);if(m.time)o._rt=m.time*1000;if(o.t==='event')evs.push(o);else if(o.t==='status'&&(!st||o.ts>st.ts))st=o;else if(o.t==='ping'&&(!pg||o.ts>pg.ts))pg=o}catch(e){}});
     if(evs.length){await dbPut(evs)}
     if(st&&(!S.status||st.ts>=S.status.ts)){S.status=st;kvSet('status',st)}
     if(pg&&(!S.ping||pg.ts>S.ping.ts)){S.ping=pg;kvSet('ping',pg)}
@@ -576,12 +576,14 @@ async function loadEvents(){
 /* ---------- derived state ---------- */
 // Last contact = newest status or ping from the agent (ping every ~60 s since agent 1.1).
 function online(){
-  const st=S.status, pg=S.ping, last=Math.max(st?st.ts:0,pg?pg.ts:0);
+  // time by the relay server's clock (the reception PC clock may be off by minutes)
+  const at=o=>o?(o._rt||o.ts):0;
+  const st=S.status, pg=S.ping, last=Math.max(at(st),at(pg));
   if(DEMO) return {ok:true,txt:'Ресепшен на связи',short:agoSec(last||Date.now()),last:last||Date.now()};
   if(!last) return {ok:false,txt:'Ожидание связи с ресепшеном',short:'ожидание',last:0};
-  const lim=pg?((pg.sec||60)*3+30)*1000:(((st&&st.hbMin)||15)*1.6+3)*60e3, age=Date.now()-last;
+  const lim=pg?(Math.max(pg.sec||600,600)*2+120)*1000:(((st&&st.hbMin)||15)*1.6+3)*60e3, age=Date.now()-last;
   if(age>lim) return {ok:false,txt:'Нет связи с ресепшеном с '+hms(last),short:ago(last),last};
-  const fs=pg&&(!st||pg.ts>=st.ts)?pg.fs:(st?st.firesec:true);
+  const fs=pg&&(!st||at(pg)>=at(st))?pg.fs:(st?st.firesec:true);
   if(fs===false) return {ok:false,txt:'FireSec не запущен на ресепшене',short:'FireSec выкл.',last};
   return {ok:true,txt:'Ресепшен на связи',short:agoSec(last),last};
 }
@@ -814,7 +816,7 @@ V.settings = ()=>{
    <div class="btns rv"><button class="btn or wide" onclick="testPush()">Проверить уведомление</button>
    <button class="btn gh wide" onclick="relayPoll().then(()=>toast('Обновлено'))">Обновить данные</button></div>
    <div class="sect rv"><span class="st">Как это работает</span></div>
-   <div class="gpanel rows rv"><div class="row"><div class="l" style="font-weight:400;font-size:13.5px;color:var(--wt-m)">Агент на компьютере ресепшена только читает состояние FireSec и сразу отправляет уведомление на этот iPhone через интернет. В пожарной системе ничего не меняется. Агент выходит на связь ${S.ping?'каждую минуту':'каждые '+((S.status&&S.status.hbMin)||15)+' минут'}: на главном экране видно точное время последней связи. Если связь пропадёт больше чем на ${S.ping?Math.round(((S.ping.sec||60)*3+30)/60):Math.round(((S.status&&S.status.hbMin)||15)*1.6+3)} минут, индикатор станет красным.</div></div></div>
+   <div class="gpanel rows rv"><div class="row"><div class="l" style="font-weight:400;font-size:13.5px;color:var(--wt-m)">Агент на компьютере ресепшена только читает состояние FireSec и сразу отправляет уведомление на этот iPhone через интернет. В пожарной системе ничего не меняется. Агент выходит на связь ${S.ping?'каждые 10 минут':'каждые '+((S.status&&S.status.hbMin)||15)+' минут'}: на главном экране видно точное время последней связи. Если связь пропадёт больше чем на ${S.ping?Math.round((Math.max(S.ping.sec||600,600)*2+120)/60):Math.round(((S.status&&S.status.hbMin)||15)*1.6+3)} минут, индикатор станет красным.</div></div></div>
    <div class="sect rv"><span class="st">Экран блокировки iPhone</span></div>
    <div class="gpanel rows rv"><div class="row"><div class="l" style="font-weight:400;font-size:13.5px;color:var(--wt-m)">Настоящий виджет на экран блокировки Apple разрешает только приложениям из App Store. Поэтому здесь сделано так: каждое уведомление заканчивается статусом здания («Здание: всё спокойно» или «🔥 1 🔧 2»), а на иконке Fire Monitor стоит число активных тревог и неисправностей. Звук push-уведомления — стандартный звук iPhone; своя сирена и вибрация звучат, когда открыт экран тревоги.</div></div></div>
    <div class="btns rv"><button class="btn gh wide" style="color:#ffb4a8" onclick="unpair()">Отключить этот телефон</button></div>`;
@@ -1014,7 +1016,7 @@ function demoData(){
     if(!fast&&rnd()<.3) S.events.push({t:'event',kind:'false',id:id+'f',ts:ts+3e5,level:'info',ref:[id],by:'Эрик',source:'app'})}
   S.events.sort((a,b)=>b.ts-a.ts);
   S.status={t:'status',ts:now-120e3,firesec:true,statesOk:true,devices:407,subs:2,disabled:5,active:[],hbMin:15,pingSec:60,escSec:60,phones:[{name:'Эрик',tier:1},{name:'Директор',tier:2}]};
-  S.ping={t:'ping',ts:now-17e3,fs:true,ok:true,sec:60}; S.seen=now-26*3600e3;
+  S.ping={t:'ping',ts:now-17e3,fs:true,ok:true,sec:600}; S.seen=now-26*3600e3;
   const mal=S.events.find(e=>e.level==='malfunction'&&!e.cleared); if(mal) S.status.active=[mal];
 }
 
